@@ -9,7 +9,7 @@ import {
   NamedCrmField,
 } from './bitrixFields';
 import { openBitrixPath } from './bitrixPath';
-import { appendCrmEntityListFilter } from './bitrixListFilter';
+import { appendCrmContactListFilter } from './bitrixListFilter';
 import { buildOurEventsListPath } from './crmNavigation';
 import { OUR_EVENTS_ENTITY_TYPE_ID, getOurEventsEntityTypeId } from './ourEventsMetric';
 
@@ -197,9 +197,8 @@ export function buildPartnerEventsListPath(
   const params = new URLSearchParams();
   const filterKey = getPartnerFieldFilterKey(partnerField, fieldMeta);
 
-  appendCrmEntityListFilter(
+  appendCrmContactListFilter(
     params,
-    partnerField,
     filterKey,
     partnerId,
     partnerLabel,

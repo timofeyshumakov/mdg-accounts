@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendCrmEntityListFilter, appendListFilterValues } from '../features/crm/functions/bitrixListFilter';
+import { appendCrmContactListFilter, appendListFilterValues, buildCrmContactFilterValue } from '../features/crm/functions/bitrixListFilter';
 
 describe('bitrixListFilter', () => {
   it('uses flat params for single filter value', () => {
@@ -26,14 +26,16 @@ describe('bitrixListFilter', () => {
     expect(params.get('TYPE_ID_label[1]')).toBe('Потенциальный партнер');
   });
 
-  it('builds smart process entity filter with additional params', () => {
+  it('builds crm contact filter as json value', () => {
+    expect(buildCrmContactFilterValue('42')).toBe('{"CONTACT":[42]}');
+  });
+
+  it('builds smart process contact filter with label', () => {
     const params = new URLSearchParams();
-    appendCrmEntityListFilter(params, 'contactId', 'CONTACT_ID', '42', 'Иванов И.И.');
+    appendCrmContactListFilter(params, 'CONTACT_ID', '42', 'Иванов И.И.');
 
     expect(params.get('apply_filter')).toBe('Y');
-    expect(params.get('CONTACT_ID')).toBe('42');
-    expect(params.get('contactId[0]')).toBe('42');
-    expect(params.get('data[additional][CONTACT_ID][0]')).toBe('42');
+    expect(params.get('CONTACT_ID')).toBe('{"CONTACT":[42]}');
     expect(params.get('CONTACT_ID_label')).toBe('Иванов И.И.');
   });
 });

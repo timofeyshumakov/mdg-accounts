@@ -27,27 +27,24 @@ export function appendListFilterValues(
   });
 }
 
-/** Фильтр по полю-ссылке на CRM-сущность в списке смарт-процесса. */
-export function appendCrmEntityListFilter(
+/** JSON-значение фильтра по контакту в списке CRM (как у сделок по мероприятию в detail-report). */
+export function buildCrmContactFilterValue(contactId: string): string {
+  const id = Number(contactId);
+  const normalizedId = Number.isFinite(id) ? id : contactId;
+
+  return JSON.stringify({ CONTACT: [normalizedId] });
+}
+
+export function appendCrmContactListFilter(
   params: URLSearchParams,
-  fieldName: string,
-  upperName: string,
-  value: string,
+  filterKey: string,
+  contactId: string,
   label?: string,
 ): void {
   params.set('apply_filter', 'Y');
+  params.set(filterKey, buildCrmContactFilterValue(contactId));
 
-  const keys = [...new Set([fieldName, upperName].filter(Boolean))];
-
-  keys.forEach((key) => {
-    params.set(key, value);
-    params.set(`${key}[0]`, value);
-    params.set(`data[additional][${key}][0]`, value);
-
-    if (label) {
-      params.set(`${key}_label`, label);
-      params.set(`${key}_label[0]`, label);
-      params.set(`data[additional][${key}_label][0]`, label);
-    }
-  });
+  if (label) {
+    params.set(`${filterKey}_label`, label);
+  }
 }
