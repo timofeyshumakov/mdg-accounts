@@ -39,7 +39,8 @@ import VueTheMask from 'vue-the-mask';
 // Components
 import App from './App.vue';
 import './reset.sass';
-import { Form, Field } from 'vee-validate'
+import { Form, Field } from 'vee-validate';
+import { ensureBx24Ready } from './features/crm/functions/bitrixReady';
 // Create Pinia instance
 const pinia = createPinia();
 
@@ -113,5 +114,8 @@ app.use(vuetify)
   .use(VueTheMask)
   .use(pinia)
   .component('Form', Form)
-  .component('Field', Field)
-  .mount('#app');
+  .component('Field', Field);
+
+void ensureBx24Ready().finally(() => {
+  app.mount('#app');
+});

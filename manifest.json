@@ -1,5 +1,5 @@
 {
-  "id": "vue",
-  "title": "Vue 3 + Vite",
-  "description": "Минимальное приложение Vue 3 + Vite. После создания задачи запускается post_create.bat: npm install и репозиторий GitHub через gh."
+  "id": "mdg-accounts",
+  "title": "Цифровое рабочее место",
+  "description": "Цифровое рабочее место — партнёры, мероприятия, аналитика"
 }
