@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2022",
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "noImplicitAny": false,
+  },
+    "vueCompilerOptions": {
+      "plugins": [
+        "@vue/language-plugin-pug"
+      ]
+    }
+  }
