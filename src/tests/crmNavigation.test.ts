@@ -9,7 +9,7 @@ describe('crmNavigation', () => {
       '/crm/type/1236/kanban/category/0/',
     );
     expect(NAV_EXTERNAL_PATHS['competitor-events']).toBe(
-      '/page/tsrm_akkaunty/meropriyatiya_konkurentov/',
+      '/crm/type/1210/list/category/0/',
     );
   });
 

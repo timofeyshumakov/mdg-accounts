@@ -6,7 +6,7 @@ import { openPartnersDirectory } from './partnersDirectory';
 
 export const NAV_EXTERNAL_PATHS = {
   'our-events': '/page/meropriyatiya/baoqgd/',
-  'competitor-events': '/page/tsrm_akkaunty/meropriyatiya_konkurentov/',
+  'competitor-events': '/crm/type/1210/list/category/0/',
   'potential-partners': '/crm/type/1236/kanban/category/0/',
   tasks: '/workgroups/group/1314/tasks/',
 } as const;

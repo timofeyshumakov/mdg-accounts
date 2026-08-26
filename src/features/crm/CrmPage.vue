@@ -15,9 +15,17 @@
       />
 
       <template v-if="activeNavId === 'crm'">
+        <CrmFiltersPanel
+          v-model="filters"
+          :assigned-options="assignedOptions"
+          :partner-options="partnerOptions"
+          :year-options="yearOptions"
+        />
         <CrmSummaryCards :metrics="summaryMetrics" />
         <CrmChartsPanel :charts="charts" />
       </template>
+
+      <MonthlyReportPage v-else-if="activeNavId === 'monthly-report'" />
 
       <section v-else class="crm-placeholder">
         <p>Раздел «{{ activeNavTitle }}» — в разработке</p>
@@ -27,11 +35,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import LoadingProgress from '../../components/LoadingProgress.vue';
 import CrmNav from './components/CrmNav.vue';
 import CrmSummaryCards from './components/CrmSummaryCards.vue';
 import CrmChartsPanel from './components/CrmChartsPanel.vue';
+import CrmFiltersPanel from './components/CrmFiltersPanel.vue';
+import MonthlyReportPage from './components/MonthlyReportPage.vue';
 import {
   navItems,
   summaryMetrics as defaultSummaryMetrics,
@@ -41,17 +51,26 @@ import {
   type SummaryMetric,
 } from './mock/dashboardData';
 import { handleNavNavigation } from './functions/crmNavigation';
-import { getPartnersCount } from './functions/partnersDirectory';
 import {
   aggregateNosologyCounts,
-  countFieldElements,
   loadPartnerContactsNosologies,
   mapCountsToChartItems,
+  type PartnerNosologyData,
 } from './functions/nosologiesMetric';
-import { getRecordFieldValue } from './functions/bitrixFields';
-import { getOurEventsCount } from './functions/ourEventsMetric';
-import { getCompetitorEventsCount } from './functions/competitorEventsMetric';
-import { getPartnersPotentialChartItems } from './functions/partnersPotentialChart';
+import { buildPartnersPotentialChartItemsFromEvents } from './functions/partnersPotentialChart';
+import {
+  buildYearOptions,
+  collectPartnerIdsFromEvents,
+  contactPassesFilters,
+  createEmptyFilters,
+  eventPassesFilters,
+  loadAssignedUsers,
+  loadCompetitorEventsRaw,
+  loadOurEventsRaw,
+  loadPartnerOptions,
+  type CrmDashboardFilters,
+  type FilterOption,
+} from './functions/crmFilters';
 import { runWhenBx24Ready } from './functions/bitrixReady';
 
 const activeNavId = ref('crm');
@@ -60,6 +79,15 @@ const charts = ref<ChartBlock[]>([...defaultCharts]);
 const isLoading = ref(true);
 const loadingProgress = ref(0);
 const loadingMessage = ref('Инициализация…');
+
+const filters = ref<CrmDashboardFilters>(createEmptyFilters());
+const assignedOptions = ref<FilterOption[]>([]);
+const partnerOptions = ref<FilterOption[]>([]);
+const yearOptions = ref<FilterOption[]>(buildYearOptions());
+
+const partnerNosologyData = ref<PartnerNosologyData | null>(null);
+const ourEventsRaw = ref<Record<string, unknown>[]>([]);
+const competitorEventsRaw = ref<Record<string, unknown>[]>([]);
 
 const activeNavTitle = computed(
   () => navItems.find((item) => item.id === activeNavId.value)?.title ?? '',
@@ -90,9 +118,57 @@ function finishLoading() {
   }, 150);
 }
 
+async function recomputeDashboard() {
+  const currentFilters = filters.value;
+  const dateFilteredOurEvents = ourEventsRaw.value.filter((event) =>
+    eventPassesFilters(event, currentFilters),
+  );
+  const dateFilteredCompetitorEvents = competitorEventsRaw.value.filter((event) =>
+    eventPassesFilters(event, currentFilters),
+  );
+
+  const partnerIdsFromEvents = (currentFilters.months.length || currentFilters.years.length)
+    ? collectPartnerIdsFromEvents(dateFilteredOurEvents)
+    : null;
+
+  const nosology = partnerNosologyData.value;
+  const filteredContacts = nosology
+    ? nosology.contacts.filter((contact) =>
+      contactPassesFilters(contact, currentFilters, partnerIdsFromEvents),
+    )
+    : [];
+
+  updateSummaryMetric('partners', filteredContacts.length);
+  updateSummaryMetric('our-events', dateFilteredOurEvents.length);
+  updateSummaryMetric('competitor-events', dateFilteredCompetitorEvents.length);
+
+  if (nosology) {
+    const nosologyItems = mapCountsToChartItems(
+      aggregateNosologyCounts(filteredContacts, nosology.fieldName, nosology.fieldMeta),
+      nosology.labelMap,
+    );
+    updateSummaryMetric('nosologies', nosologyItems.length);
+    updateChartItems('nosologies-partners', nosologyItems);
+  }
+
+  try {
+    const potentialItems = await buildPartnersPotentialChartItemsFromEvents(dateFilteredOurEvents);
+    updateChartItems('partners-potential', potentialItems);
+  } catch (error) {
+    console.warn('Не удалось пересчитать график коммерческого потенциала:', error);
+  }
+}
+
 onMounted(() => {
   void runWhenBx24Ready(loadDashboardData);
 });
+
+watch(filters, () => {
+  if (isLoading.value) {
+    return;
+  }
+  void recomputeDashboard();
+}, { deep: true });
 
 async function loadDashboardData() {
   isLoading.value = true;
@@ -100,51 +176,49 @@ async function loadDashboardData() {
   loadingMessage.value = 'Подготовка данных…';
 
   try {
-    setLoadingStep(12, 'Загрузка партнёров…');
-    await getPartnersCount()
-      .then((count) => updateSummaryMetric('partners', count))
-      .catch((error) => {
-        console.warn('Не удалось загрузить количество партнеров:', error);
-      });
+    setLoadingStep(8, 'Загрузка фильтров…');
+    await Promise.all([
+      loadAssignedUsers()
+        .then((options) => { assignedOptions.value = options; })
+        .catch((error) => {
+          console.warn('Не удалось загрузить ответственных:', error);
+        }),
+      loadPartnerOptions()
+        .then((options) => { partnerOptions.value = options; })
+        .catch((error) => {
+          console.warn('Не удалось загрузить партнеров для фильтра:', error);
+        }),
+    ]);
 
-    setLoadingStep(32, 'Загрузка нозологий…');
+    setLoadingStep(28, 'Загрузка партнёров и нозологий…');
     await loadPartnerContactsNosologies()
-      .then(({ contacts, fieldName, fieldMeta, labelMap }) => {
-        const total = contacts.reduce(
-          (sum, contact) => sum + countFieldElements(getRecordFieldValue(contact, fieldName, fieldMeta)),
-          0,
-        );
-        updateSummaryMetric('nosologies', total);
-        updateChartItems(
-          'nosologies-partners',
-          mapCountsToChartItems(aggregateNosologyCounts(contacts, fieldName, labelMap, fieldMeta)),
-        );
+      .then((data) => {
+        partnerNosologyData.value = data;
       })
       .catch((error) => {
         console.warn('Не удалось загрузить данные по нозологиям:', error);
       });
 
-    setLoadingStep(52, 'Загрузка мероприятий…');
-    await getOurEventsCount()
-      .then((count) => updateSummaryMetric('our-events', count))
+    setLoadingStep(55, 'Загрузка мероприятий…');
+    await loadOurEventsRaw()
+      .then((events) => {
+        ourEventsRaw.value = events;
+      })
       .catch((error) => {
-        console.warn('Не удалось загрузить количество мероприятий:', error);
+        console.warn('Не удалось загрузить мероприятия:', error);
       });
 
-    setLoadingStep(68, 'Загрузка мероприятий конкурентов…');
-    await getCompetitorEventsCount()
-      .then((count) => updateSummaryMetric('competitor-events', count))
+    setLoadingStep(75, 'Загрузка мероприятий конкурентов…');
+    await loadCompetitorEventsRaw()
+      .then((events) => {
+        competitorEventsRaw.value = events;
+      })
       .catch((error) => {
-        console.warn('Не удалось загрузить количество мероприятий конкурентов:', error);
+        console.warn('Не удалось загрузить мероприятия конкурентов:', error);
       });
 
-    setLoadingStep(84, 'Загрузка коммерческого потенциала…');
-    await getPartnersPotentialChartItems()
-      .then((items) => updateChartItems('partners-potential', items))
-      .catch((error) => {
-        console.warn('Не удалось загрузить график коммерческого потенциала:', error);
-      });
-
+    setLoadingStep(90, 'Расчёт показателей…');
+    await recomputeDashboard();
     finishLoading();
   } catch (error) {
     console.error('Ошибка загрузки рабочего места:', error);
@@ -153,8 +227,8 @@ async function loadDashboardData() {
 }
 
 function onNavigate(item: NavItem) {
-  if (item.id === 'crm') {
-    activeNavId.value = 'crm';
+  if (item.id === 'crm' || item.id === 'monthly-report') {
+    activeNavId.value = item.id;
     return;
   }
 

@@ -85,12 +85,11 @@ describe('nosologiesMetric', () => {
     const counts = aggregateNosologyCounts(
       contacts,
       NOSOLOGY_CONTACT_FIELD,
-      labelMap,
     );
 
-    expect(mapCountsToChartItems(counts)).toEqual([
-      { label: 'Урология', value: 2 },
-      { label: 'Онкология', value: 1 },
+    expect(mapCountsToChartItems(counts, labelMap)).toEqual([
+      { id: '30944', label: 'Урология', value: 2 },
+      { id: '30952', label: 'Онкология', value: 1 },
     ]);
   });
 
@@ -132,11 +131,11 @@ describe('nosologiesMetric', () => {
       { UF_CRM_NOZ: ['2', '2'] },
     ];
 
-    const counts = aggregateNosologyCounts(contacts, 'UF_CRM_NOZ', labelMap);
+    const counts = aggregateNosologyCounts(contacts, 'UF_CRM_NOZ');
 
-    expect(mapCountsToChartItems(counts)).toEqual([
-      { label: 'Онкология', value: 3 },
-      { label: 'Кардиология', value: 2 },
+    expect(mapCountsToChartItems(counts, labelMap)).toEqual([
+      { id: '2', label: 'Онкология', value: 3 },
+      { id: '1', label: 'Кардиология', value: 2 },
     ]);
   });
 });

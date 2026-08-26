@@ -147,10 +147,10 @@ async function loadNosologyLabelMap(
   return buildLabelMapFromFieldDefinition(fieldMeta);
 }
 
+/** Считает вхождения нозологий по id значения поля (элемент списка / enum). */
 export function aggregateNosologyCounts(
   contacts: Record<string, unknown>[],
   fieldName: string,
-  labelMap: Map<string, string>,
   fieldMeta?: NamedCrmField | null,
 ): Map<string, number> {
   const counts = new Map<string, number>();
@@ -158,17 +158,23 @@ export function aggregateNosologyCounts(
   contacts.forEach((contact) => {
     const rawValue = getRecordFieldValue(contact, fieldName, fieldMeta);
     extractFieldValues(rawValue).forEach((raw) => {
-      const label = labelMap.get(raw) ?? raw;
-      counts.set(label, (counts.get(label) ?? 0) + 1);
+      counts.set(raw, (counts.get(raw) ?? 0) + 1);
     });
   });
 
   return counts;
 }
 
-export function mapCountsToChartItems(counts: Map<string, number>): ChartItem[] {
+export function mapCountsToChartItems(
+  counts: Map<string, number>,
+  labelMap: Map<string, string> = new Map(),
+): ChartItem[] {
   return [...counts.entries()]
-    .map(([label, value]) => ({ label, value }))
+    .map(([id, value]) => ({
+      id,
+      label: labelMap.get(id) ?? id,
+      value,
+    }))
     .sort((left, right) =>
       right.value - left.value || left.label.localeCompare(right.label, 'ru'),
     );
@@ -250,17 +256,13 @@ export async function loadPartnerContactsNosologies(): Promise<PartnerNosologyDa
 }
 
 export async function getNosologiesCount(): Promise<number> {
-  const { contacts, fieldName, fieldMeta } = await loadPartnerContactsNosologies();
-
-  return contacts.reduce(
-    (total, contact) => total + countFieldElements(getRecordFieldValue(contact, fieldName, fieldMeta)),
-    0,
-  );
+  const items = await getNosologiesPartnersChartItems();
+  return items.length;
 }
 
 export async function getNosologiesPartnersChartItems(): Promise<ChartItem[]> {
   const { contacts, fieldName, fieldMeta, labelMap } = await loadPartnerContactsNosologies();
-  const counts = aggregateNosologyCounts(contacts, fieldName, labelMap, fieldMeta);
+  const counts = aggregateNosologyCounts(contacts, fieldName, fieldMeta);
 
-  return mapCountsToChartItems(counts);
+  return mapCountsToChartItems(counts, labelMap);
 }

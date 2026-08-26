@@ -12,10 +12,10 @@
     )
       template(#prepend)
         v-btn(@click="decrement" icon)
-          v-icon(icon="minus-circle" color="primary" class="button-icon")
+          v-icon(icon="$minusCircle" color="primary" class="button-icon")
       template(#append)
         v-btn(@click="increment" icon)
-          v-icon(icon="plus-circle" color="primary" class="button-icon")
+          v-icon(icon="$plusCircle" color="primary" class="button-icon")
 </template>
   
 <script>

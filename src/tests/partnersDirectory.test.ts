@@ -45,4 +45,19 @@ describe('partnersDirectory', () => {
       '@TYPE_ID': [...POTENTIAL_PARTNER_TYPE_IDS, 'ACTUAL_PARTNER'],
     });
   });
+
+  it('builds contact list path with nosology filter', () => {
+    const path = buildPartnersListPath(types, {
+      field: 'UF_CRM_1782832034',
+      id: '30944',
+      label: 'Урология',
+    });
+    const query = new URLSearchParams(path.split('?')[1]);
+
+    expect(query.get('apply_filter')).toBe('Y');
+    expect(query.get('TYPE_ID[0]')).toBe('SUPPLIER');
+    expect(query.get('UF_CRM_1782832034[0]')).toBe('30944');
+    expect(query.get('UF_CRM_1782832034_label[0]')).toBe('Урология');
+    expect(query.get('data[additional][UF_CRM_1782832034][0]')).toBe('30944');
+  });
 });

@@ -118,10 +118,19 @@ export function resolveApiFieldName(
 export function buildContactListSelect(
   fieldName: string,
   field?: NamedCrmField | null,
+  extraFields: string[] = [],
 ): string[] {
   const apiFieldName = resolveApiFieldName(fieldName, field);
 
-  return [...new Set(['ID', apiFieldName, fieldName, field?.upperName, field?.fieldName].filter(
+  return [...new Set([
+    'ID',
+    'ASSIGNED_BY_ID',
+    apiFieldName,
+    fieldName,
+    field?.upperName,
+    field?.fieldName,
+    ...extraFields,
+  ].filter(
     (value): value is string => Boolean(value),
   ))];
 }

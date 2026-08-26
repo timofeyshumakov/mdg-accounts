@@ -21,7 +21,7 @@ export const EVENT_PARTNER_FIELD_UPPER = 'CONTACT_ID';
 export const EVENT_COLLECTED_SUM_FIELD = 'UF_CRM_38_1750949359532';
 export const EVENT_COLLECTED_SUM_FIELD_CAMEL = 'ufCrm38_1750949359532';
 
-const EVENT_PARTNER_FIELD_META: NamedCrmField = {
+export const EVENT_PARTNER_FIELD_META: NamedCrmField = {
   title: 'Контакт',
   fieldName: EVENT_PARTNER_FIELD,
   upperName: EVENT_PARTNER_FIELD_UPPER,
@@ -180,6 +180,15 @@ export function formatContactName(contact: ContactListItem): string {
   return parts.join(' ').trim() || `Контакт #${contact.ID}`;
 }
 
+/** Имя для фильтра Bitrix: «Игорь Баранов». */
+export function formatContactNameForFilter(contact: ContactListItem): string {
+  const parts = [contact.NAME, contact.LAST_NAME]
+    .filter(Boolean)
+    .map(String);
+
+  return parts.join(' ').trim() || formatContactName(contact);
+}
+
 export function getPartnerFieldFilterKey(
   fieldName: string,
   field?: NamedCrmField | null,
@@ -212,10 +221,25 @@ export async function openPartnerEventsList(
   partnerLabel?: string,
 ): Promise<void> {
   const entityTypeId = await getOurEventsEntityTypeId();
+  let filterLabel = partnerLabel;
+
+  try {
+    const contacts = await fetchAllPages<ContactListItem>('crm.contact.list', {
+      filter: { ID: partnerId },
+      select: ['ID', 'NAME', 'LAST_NAME', 'SECOND_NAME'],
+    });
+    const contact = contacts[0];
+    if (contact) {
+      filterLabel = formatContactNameForFilter(contact);
+    }
+  } catch {
+    // оставляем подпись из графика
+  }
+
   openBitrixPath(buildPartnerEventsListPath(
     EVENT_PARTNER_FIELD,
     partnerId,
-    partnerLabel,
+    filterLabel,
     EVENT_PARTNER_FIELD_META,
     entityTypeId,
   ));
@@ -256,6 +280,21 @@ function mapPartnerTotalsToChartItems(
     );
 }
 
+export async function buildPartnersPotentialChartItemsFromEvents(
+  events: Record<string, unknown>[],
+): Promise<ChartItem[]> {
+  const totals = aggregatePartnerCollectedSums(events);
+  const partnerNames = await loadPartnerNames([...totals.keys()]);
+  return mapPartnerTotalsToChartItems(totals, partnerNames);
+}
+
+export function buildPartnersPotentialChartItemsSync(
+  events: Record<string, unknown>[],
+  partnerNames: Map<string, string>,
+): ChartItem[] {
+  return mapPartnerTotalsToChartItems(aggregatePartnerCollectedSums(events), partnerNames);
+}
+
 async function fetchEventsForPartnerChart(
   entityTypeId: number,
 ): Promise<Record<string, unknown>[]> {
@@ -286,8 +325,5 @@ async function fetchEventsForPartnerChart(
 export async function getPartnersPotentialChartItems(): Promise<ChartItem[]> {
   const entityTypeId = await getOurEventsEntityTypeId();
   const events = await fetchEventsForPartnerChart(entityTypeId);
-  const totals = aggregatePartnerCollectedSums(events);
-  const partnerNames = await loadPartnerNames([...totals.keys()]);
-
-  return mapPartnerTotalsToChartItems(totals, partnerNames);
+  return buildPartnersPotentialChartItemsFromEvents(events);
 }

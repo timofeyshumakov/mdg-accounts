@@ -7,7 +7,7 @@
       :items="chart.items"
       :value-label="getChartValueLabel(chart.id)"
       :format-value="getChartFormatValue(chart.id)"
-      :clickable="chart.id === 'partners-potential'"
+      :clickable="isChartClickable(chart.id)"
       @item-click="onChartItemClick(chart.id, $event)"
     />
   </section>
@@ -16,12 +16,18 @@
 <script setup lang="ts">
 import type { ChartBlock, ChartItem } from '../mock/dashboardData';
 import { runWhenBx24Ready } from '../functions/bitrixReady';
+import { NOSOLOGY_CONTACT_FIELD } from '../functions/nosologiesMetric';
+import { openPartnersByNosology } from '../functions/partnersDirectory';
 import { openPartnerEventsList } from '../functions/partnersPotentialChart';
 import CrmHorizontalChart from './CrmHorizontalChart.vue';
 
 defineProps<{
   charts: ChartBlock[];
 }>();
+
+function isChartClickable(chartId: string): boolean {
+  return chartId === 'partners-potential' || chartId === 'nosologies-partners';
+}
 
 function getChartValueLabel(chartId: string): string {
   if (chartId === 'partners-potential') {
@@ -52,10 +58,21 @@ function formatCount(value: number): string {
 }
 
 function onChartItemClick(chartId: string, item: ChartItem) {
-  if (chartId !== 'partners-potential' || !item.id) {
+  if (!item.id) {
     return;
   }
 
-  void runWhenBx24Ready(() => openPartnerEventsList(item.id!, item.label));
+  if (chartId === 'partners-potential') {
+    void runWhenBx24Ready(() => openPartnerEventsList(item.id!, item.label));
+    return;
+  }
+
+  if (chartId === 'nosologies-partners') {
+    void runWhenBx24Ready(() => openPartnersByNosology(
+      item.id!,
+      item.label,
+      NOSOLOGY_CONTACT_FIELD,
+    ));
+  }
 }
 </script>

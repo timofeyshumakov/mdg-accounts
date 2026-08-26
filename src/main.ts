@@ -15,6 +15,7 @@ import {
   VCardTitle,
   VCheckbox,
   VAvatar,
+  VChip,
   VDataTable,
   VDialog,
   VExpansionPanel,
@@ -31,6 +32,8 @@ import {
   VProgressLinear,
   VSelect,
   VSpacer,
+  VTextField,
+  VTextarea,
 } from 'vuetify/components';
 import { Ripple } from 'vuetify/directives';
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg';
@@ -41,6 +44,7 @@ import App from './App.vue';
 import './reset.sass';
 import { Form, Field } from 'vee-validate';
 import { ensureBx24Ready } from './features/crm/functions/bitrixReady';
+import { appIcons } from './features/crm/icons';
 // Create Pinia instance
 const pinia = createPinia();
 
@@ -60,6 +64,7 @@ const vuetify = createVuetify({
     VCardTitle,
     VCheckbox,
     VAvatar,
+    VChip,
     VDataTable,
     VDialog,
     VExpansionPanel,
@@ -76,13 +81,18 @@ const vuetify = createVuetify({
     VProgressLinear,
     VSelect,
     VSpacer,
+    VTextField,
+    VTextarea,
   },
   directives: {
     Ripple,
   },
   icons: {
     defaultSet: 'mdi',
-    aliases,
+    aliases: {
+      ...aliases,
+      ...appIcons,
+    },
     sets: {
       mdi,
     },

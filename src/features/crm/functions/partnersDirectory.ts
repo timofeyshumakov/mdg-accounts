@@ -46,12 +46,31 @@ export function buildPartnersContactFilter(
   return { '@TYPE_ID': typeIds };
 }
 
-export function buildPartnersListPath(types: ContactTypeStatus[] = []): string {
+export interface PartnersNosologyFilter {
+  field: string;
+  id: string;
+  label?: string;
+}
+
+export function buildPartnersListPath(
+  types: ContactTypeStatus[] = [],
+  nosology?: PartnersNosologyFilter,
+): string {
   const typeIds = resolvePartnerTypeIds(types);
   const params = new URLSearchParams();
   const labels = typeIds.map((typeId) => resolvePartnerTypeLabel(typeId, types));
 
   appendListFilterValues(params, 'TYPE_ID', typeIds, labels);
+
+  if (nosology?.id) {
+    appendListFilterValues(
+      params,
+      nosology.field,
+      [nosology.id],
+      [nosology.label],
+      { forceIndexed: true },
+    );
+  }
 
   return `${CONTACT_LIST_PATH}?${params.toString()}`;
 }
@@ -124,7 +143,9 @@ export async function getPartnersCount(): Promise<number> {
   return countContactsByFilter(buildPartnersContactFilter(typeIds));
 }
 
-export async function openPartnersDirectory(): Promise<void> {
+export async function openPartnersDirectory(
+  nosology?: PartnersNosologyFilter,
+): Promise<void> {
   let types: ContactTypeStatus[] = [];
 
   try {
@@ -133,5 +154,17 @@ export async function openPartnersDirectory(): Promise<void> {
     console.warn('Не удалось загрузить типы контактов для фильтра:', error);
   }
 
-  openBitrixPath(buildPartnersListPath(types));
+  openBitrixPath(buildPartnersListPath(types, nosology));
+}
+
+export async function openPartnersByNosology(
+  nosologyId: string,
+  nosologyLabel?: string,
+  nosologyField: string = 'UF_CRM_1782832034',
+): Promise<void> {
+  await openPartnersDirectory({
+    field: nosologyField,
+    id: nosologyId,
+    label: nosologyLabel,
+  });
 }

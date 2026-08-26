@@ -53,6 +53,27 @@ html,body
 input,button,textarea
     font-family: inherit
 
+// Иконки MDI не должны наследовать Montserrat
+.mdi::before,
+.v-icon.mdi::before,
+i.mdi::before
+    font-family: "Material Design Icons" !important
+    font-weight: normal !important
+    font-style: normal !important
+    line-height: 1 !important
+    letter-spacing: normal !important
+    text-transform: none !important
+    display: inline-block !important
+    white-space: nowrap
+    word-wrap: normal
+    direction: ltr
+    -webkit-font-smoothing: antialiased
+    text-rendering: auto
+    -moz-osx-font-smoothing: grayscale
+
+.v-icon
+    font-feature-settings: "liga" 1
+
 input::-ms-clear
     display: none
 

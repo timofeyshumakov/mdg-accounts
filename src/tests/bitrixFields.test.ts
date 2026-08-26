@@ -11,7 +11,7 @@ describe('bitrixFields contact select', () => {
       buildContactListSelect('ufCrm123Nosology', {
         upperName: 'UF_CRM_123_NOZ',
       }),
-    ).toEqual(['ID', 'UF_CRM_123_NOZ', 'ufCrm123Nosology']);
+    ).toEqual(['ID', 'ASSIGNED_BY_ID', 'UF_CRM_123_NOZ', 'ufCrm123Nosology']);
   });
 
   it('keeps UF field name from userfield definition', () => {
@@ -26,6 +26,7 @@ describe('bitrixFields contact select', () => {
   it('includes nosology field in crm.contact.list select', () => {
     expect(buildContactListSelect(NOSOLOGY_CONTACT_FIELD)).toEqual([
       'ID',
+      'ASSIGNED_BY_ID',
       NOSOLOGY_CONTACT_FIELD,
     ]);
   });

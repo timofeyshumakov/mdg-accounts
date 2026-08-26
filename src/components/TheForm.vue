@@ -102,13 +102,13 @@
   </v-dialog>
   <td colspan="3" class="add-item-td" @click="showDialog()">
     <div class="add-item">
-      <v-icon color="primary" class="button-icon">mdi-plus</v-icon>
+      <v-icon color="primary" class="button-icon" icon="$plus" />
         <span>Добавить критерий</span>
     </div>
   </td>
   <td colspan="3" class="add-item-td" @click="showBlockDialog()">
     <div class="add-item">
-      <v-icon color="primary" class="button-icon">mdi-plus</v-icon>
+      <v-icon color="primary" class="button-icon" icon="$plus" />
         <span>Добавить блок</span>
     </div>
   </td>

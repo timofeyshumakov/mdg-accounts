@@ -3,10 +3,11 @@ export function appendListFilterValues(
   field: string,
   values: string[],
   labels: Array<string | undefined> = [],
+  options: { forceIndexed?: boolean } = {},
 ): void {
   params.set('apply_filter', 'Y');
 
-  if (values.length === 1) {
+  if (values.length === 1 && !options.forceIndexed) {
     params.set(field, values[0]);
     if (labels[0]) {
       params.set(`${field}_label`, labels[0]);
@@ -27,12 +28,10 @@ export function appendListFilterValues(
   });
 }
 
-/** JSON-значение фильтра по контакту в списке CRM (как у сделок по мероприятию в detail-report). */
+/** Числовой id контакта для URL-фильтра списка CRM. */
 export function buildCrmContactFilterValue(contactId: string): string {
   const id = Number(contactId);
-  const normalizedId = Number.isFinite(id) ? id : contactId;
-
-  return JSON.stringify({ CONTACT: [normalizedId] });
+  return String(Number.isFinite(id) ? id : contactId);
 }
 
 export function appendCrmContactListFilter(
