@@ -532,14 +532,7 @@ export async function loadMonthlyReportData(
     .map(([id, title]) => ({ id, title }))
     .sort((left, right) => left.title.localeCompare(right.title, 'ru'));
 
-  const partnerTypeRelationIds = new Set<string>();
-  relationLabelMap.forEach((_label, id) => {
-    // «Новый» оставляем и в «Статус отношений»; из чипов убираем только «Действующий»
-    if (/^\d+$/.test(id) && resolvePartnerTypeId(id, relationLabelMap) === 'active') {
-      partnerTypeRelationIds.add(id);
-    }
-  });
-
+  // «Новый» / «Действующий» дублируются в «Тип партнера» и «Статус отношений» — по ТЗ
   const relationStatusOptions = [...relationLabelMap.entries()]
     .filter(([id]) => /^\d+$/.test(id))
     .map(([id, title]) => ({ id, title }))
@@ -564,7 +557,6 @@ export async function loadMonthlyReportData(
       relationLabelMap,
       rowsWithTouches,
       'relationStatusId',
-      partnerTypeRelationIds,
     ),
     relationStatusOptions,
     currentStatusChips: chipsFromLabelMap(currentLabelMap, rowsWithTouches, 'currentStatusId'),

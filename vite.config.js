@@ -64,6 +64,8 @@ export default defineConfig(({ mode }) => {
         : {}),
     },
     build: {
+      // PNG карточек >4kb иначе уходят в /assets/*.png внутри JS — build.bat это не правит
+      assetsInlineLimit: 10_240,
       rollupOptions: {
         output: {
           manualChunks(id) {
