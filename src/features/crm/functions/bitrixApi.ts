@@ -6,8 +6,24 @@ export function extractPageItems<T>(data: unknown): T[] {
     return data as T[];
   }
 
-  if (data && typeof data === 'object' && 'items' in data) {
-    return ((data as { items?: T[] }).items ?? []);
+  if (data && typeof data === 'object') {
+    const record = data as {
+      items?: unknown;
+      tasks?: unknown;
+    };
+
+    if (Array.isArray(record.items)) {
+      return record.items as T[];
+    }
+
+    if (Array.isArray(record.tasks)) {
+      return record.tasks as T[];
+    }
+
+    // BX24 иногда отдаёт tasks как объект { "0": {...}, "1": {...} }
+    if (record.tasks && typeof record.tasks === 'object') {
+      return Object.values(record.tasks as Record<string, T>);
+    }
   }
 
   return [];

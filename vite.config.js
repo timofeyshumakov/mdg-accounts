@@ -40,10 +40,12 @@ export default defineConfig(({ mode }) => {
   return {
     plugins,
     test: {
-      browser: {
-        enabled: true,
-        name: 'chromium',
+      environment: 'node',
+      env: {
+        BITRIX_WEBHOOK_URL: env.BITRIX_WEBHOOK_URL ?? '',
+        BITRIX_TEST_CONTACT_ID: env.BITRIX_TEST_CONTACT_ID ?? '32610',
       },
+      testTimeout: 60_000,
     },
     server: {
       host: env.VITE_DEV_HOST || 'localhost',

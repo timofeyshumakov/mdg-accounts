@@ -25,7 +25,10 @@
         <CrmChartsPanel :charts="charts" />
       </template>
 
-      <MonthlyReportPage v-else-if="activeNavId === 'monthly-report'" />
+      <MonthlyReportPage
+        v-else-if="activeNavId === 'monthly-report'"
+        :assigned-options="assignedOptions"
+      />
 
       <section v-else class="crm-placeholder">
         <p>Раздел «{{ activeNavTitle }}» — в разработке</p>

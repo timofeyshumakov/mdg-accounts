@@ -35,6 +35,10 @@ export interface Bx24Api {
     params: Record<string, unknown>,
     callback: (result: Bx24CallResult) => void,
   ) => void;
+  callBatch?: (
+    commands: Record<string, { method: string; params?: Record<string, unknown> }>,
+    callback: (results: Record<string, Bx24CallResult>) => void,
+  ) => void;
   getAuth?: () => Bx24Auth | null;
   openPath?: (path: string, callback?: (result: { result?: string; errorCode?: string }) => void) => void;
 }

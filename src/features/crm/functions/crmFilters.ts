@@ -1,4 +1,3 @@
-import { callApi } from '../../../functions/callApi';
 import { callBxMethod, fetchAllCrmItems, fetchAllPages } from './bitrixApi';
 import { extractEntityIds } from './bitrixFields';
 import {
@@ -281,6 +280,17 @@ interface BitrixUser {
   ACTIVE?: boolean | string;
 }
 
+interface BitrixDepartment {
+  ID?: string | number;
+  NAME?: string;
+  PARENT?: string | number;
+}
+
+/** Отдел для фильтра «Ответственный» в CRM / monthly report. */
+export const PARTNERS_DEPARTMENT_NAME = 'Отдел по работе с партнерами';
+/** ID отдела «Отдел по работе с партнерами» (department.get). */
+export const PARTNERS_DEPARTMENT_ID = '566';
+
 function formatUserName(user: BitrixUser): string {
   const parts = [user.LAST_NAME, user.NAME, user.SECOND_NAME]
     .filter(Boolean)
@@ -289,25 +299,86 @@ function formatUserName(user: BitrixUser): string {
   return parts.join(' ').trim() || `Пользователь #${user.ID}`;
 }
 
+export async function findDepartmentIdsByName(name: string): Promise<string[]> {
+  const departments = await fetchAllPages<BitrixDepartment>('department.get', {});
+  const needle = name.trim().toLowerCase();
+
+  const root = departments.find((dept) => String(dept.NAME ?? '').trim().toLowerCase() === needle)
+    ?? departments.find((dept) => String(dept.NAME ?? '').trim().toLowerCase().includes(needle));
+
+  if (!root?.ID) {
+    return [];
+  }
+
+  const rootId = String(root.ID);
+  const ids = new Set<string>([rootId]);
+  let grew = true;
+
+  while (grew) {
+    grew = false;
+    departments.forEach((dept) => {
+      const id = dept.ID != null ? String(dept.ID) : '';
+      const parent = dept.PARENT != null ? String(dept.PARENT) : '';
+      if (!id || !parent || ids.has(id) || !ids.has(parent)) {
+        return;
+      }
+      ids.add(id);
+      grew = true;
+    });
+  }
+
+  return [...ids];
+}
+
 export async function loadAssignedUsers(): Promise<FilterOption[]> {
-  const raw = await callApi(
-    'user.get',
-    {},
-    ['ID', 'NAME', 'LAST_NAME', 'SECOND_NAME'],
-    null,
-    0,
-    0,
+  let departmentIds: string[] = [PARTNERS_DEPARTMENT_ID];
+
+  try {
+    const resolved = await findDepartmentIdsByName(PARTNERS_DEPARTMENT_NAME);
+    if (resolved.length) {
+      departmentIds = resolved;
+    }
+  } catch (error) {
+    console.warn(
+      `Не удалось загрузить структуру отделов, используем ID ${PARTNERS_DEPARTMENT_ID}:`,
+      error,
+    );
+  }
+
+  if (!departmentIds.length) {
+    console.warn(
+      `Не найден отдел «${PARTNERS_DEPARTMENT_NAME}» — фильтр ответственных будет пустым`,
+    );
+    return [];
+  }
+
+  const usersById = new Map<string, FilterOption>();
+
+  await Promise.all(
+    departmentIds.map(async (departmentId) => {
+      const users = await fetchAllPages<BitrixUser>('user.get', {
+        FILTER: {
+          UF_DEPARTMENT: departmentId,
+          ACTIVE: true,
+        },
+      });
+
+      users.forEach((user) => {
+        const id = String(user.ID ?? '');
+        if (!id || usersById.has(id)) {
+          return;
+        }
+        usersById.set(id, {
+          id,
+          title: formatUserName(user),
+        });
+      });
+    }),
   );
 
-  const users = (Array.isArray(raw) ? raw.flat(Infinity) : []) as BitrixUser[];
-
-  return users
-    .map((user) => ({
-      id: String(user.ID ?? ''),
-      title: formatUserName(user),
-    }))
-    .filter((user) => user.id)
-    .sort((left, right) => left.title.localeCompare(right.title, 'ru'));
+  return [...usersById.values()].sort((left, right) =>
+    left.title.localeCompare(right.title, 'ru'),
+  );
 }
 
 export async function loadPartnerOptions(): Promise<FilterOption[]> {
