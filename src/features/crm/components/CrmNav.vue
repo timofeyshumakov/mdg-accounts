@@ -17,10 +17,12 @@
         {{ item.title }}
       </button>
     </nav>
+    <AppZoomSlider />
   </section>
 </template>
 
 <script setup lang="ts">
+import AppZoomSlider from './AppZoomSlider.vue';
 import type { NavItem } from '../mock/dashboardData';
 
 defineProps<{

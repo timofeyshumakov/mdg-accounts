@@ -8,31 +8,33 @@
     />
 
     <v-main class="crm-page">
-      <CrmNav
-        :items="navItems"
-        :active-id="activeNavId"
-        @navigate="onNavigate"
-      />
-
-      <template v-if="activeNavId === 'crm'">
-        <CrmFiltersPanel
-          v-model="filters"
-          :assigned-options="assignedOptions"
-          :partner-options="partnerOptions"
-          :year-options="yearOptions"
+      <div class="crm-page__zoom" :style="zoomStyle">
+        <CrmNav
+          :items="navItems"
+          :active-id="activeNavId"
+          @navigate="onNavigate"
         />
-        <CrmSummaryCards :metrics="summaryMetrics" />
-        <CrmChartsPanel :charts="charts" />
-      </template>
 
-      <MonthlyReportPage
-        v-else-if="activeNavId === 'monthly-report'"
-        :assigned-options="assignedOptions"
-      />
+        <template v-if="activeNavId === 'crm'">
+          <CrmFiltersPanel
+            v-model="filters"
+            :assigned-options="assignedOptions"
+            :partner-options="partnerOptions"
+            :year-options="yearOptions"
+          />
+          <CrmSummaryCards :metrics="summaryMetrics" />
+          <CrmChartsPanel :charts="charts" />
+        </template>
 
-      <section v-else class="crm-placeholder">
-        <p>Раздел «{{ activeNavTitle }}» — в разработке</p>
-      </section>
+        <MonthlyReportPage
+          v-else-if="activeNavId === 'monthly-report'"
+          :assigned-options="assignedOptions"
+        />
+
+        <section v-else class="crm-placeholder">
+          <p>Раздел «{{ activeNavTitle }}» — в разработке</p>
+        </section>
+      </div>
     </v-main>
   </v-app>
 </template>
@@ -75,7 +77,9 @@ import {
   type FilterOption,
 } from './functions/crmFilters';
 import { runWhenBx24Ready } from './functions/bitrixReady';
+import { useAppZoom } from '../../composables/useAppZoom';
 
+const { zoomStyle } = useAppZoom();
 const activeNavId = ref('crm');
 const summaryMetrics = ref<SummaryMetric[]>([...defaultSummaryMetrics]);
 const charts = ref<ChartBlock[]>([...defaultCharts]);
