@@ -8,13 +8,16 @@
     />
 
     <v-main class="crm-page">
-      <div class="crm-page__zoom" :style="zoomStyle">
+      <section class="crm-nav-panel panel">
         <CrmNav
           :items="navItems"
           :active-id="activeNavId"
           @navigate="onNavigate"
         />
+        <AppZoomSlider />
+      </section>
 
+      <div class="crm-page__zoom" :style="zoomStyle">
         <template v-if="activeNavId === 'crm'">
           <CrmFiltersPanel
             v-model="filters"
@@ -43,6 +46,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import LoadingProgress from '../../components/LoadingProgress.vue';
 import CrmNav from './components/CrmNav.vue';
+import AppZoomSlider from './components/AppZoomSlider.vue';
 import CrmSummaryCards from './components/CrmSummaryCards.vue';
 import CrmChartsPanel from './components/CrmChartsPanel.vue';
 import CrmFiltersPanel from './components/CrmFiltersPanel.vue';

@@ -1,6 +1,5 @@
 <template>
-  <section class="crm-nav-panel panel">
-    <nav class="workspace-tabs" role="tablist" aria-label="Разделы цифрового рабочего места">
+  <nav class="workspace-tabs" role="tablist" aria-label="Разделы цифрового рабочего места">
       <button
         v-for="item in items"
         :key="item.id"
@@ -16,13 +15,10 @@
       >
         {{ item.title }}
       </button>
-    </nav>
-    <AppZoomSlider />
-  </section>
+  </nav>
 </template>
 
 <script setup lang="ts">
-import AppZoomSlider from './AppZoomSlider.vue';
 import type { NavItem } from '../mock/dashboardData';
 
 defineProps<{
