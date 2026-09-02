@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   filterMonthlyReportRows,
+  filterMonthlyReportRowsForChipCounts,
   recountChips,
   type MonthlyChipOption,
   type MonthlyReportRow,
@@ -94,5 +95,21 @@ describe('monthlyReportData', () => {
     const chips = recountChips(sampleRows, partnerTypeChips, 'partnerTypeId');
     expect(chips.find((chip) => chip.id === 'new')?.count).toBe(1);
     expect(chips.find((chip) => chip.id === 'active')?.count).toBe(1);
+  });
+
+  it('recounts chips with cross-filters excluding own group', () => {
+    const params = {
+      search: '',
+      assignedIds: ['10'],
+      months: [],
+      years: [],
+      partnerTypes: ['active'],
+      relationStatuses: [],
+      currentStatuses: [],
+    };
+    const filtered = filterMonthlyReportRowsForChipCounts(sampleRows, params, 'partnerTypes');
+    const chips = recountChips(filtered, partnerTypeChips, 'partnerTypeId');
+    expect(chips.find((chip) => chip.id === 'new')?.count).toBe(1);
+    expect(chips.find((chip) => chip.id === 'active')?.count).toBe(0);
   });
 });

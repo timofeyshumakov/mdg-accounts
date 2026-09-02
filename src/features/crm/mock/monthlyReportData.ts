@@ -139,6 +139,29 @@ export function filterMonthlyReportRows(
   });
 }
 
+export type MonthlyReportListFilterParams = {
+  search: string;
+  assignedIds: string[];
+  months: number[];
+  years: string[];
+  partnerTypes: string[];
+  relationStatuses: string[];
+  currentStatuses: string[];
+};
+
+export function filterMonthlyReportRowsForChipCounts(
+  rows: MonthlyReportRow[],
+  params: MonthlyReportListFilterParams,
+  exclude: 'partnerTypes' | 'relationStatuses' | 'currentStatuses',
+): MonthlyReportRow[] {
+  return filterMonthlyReportRows(rows, {
+    ...params,
+    partnerTypes: exclude === 'partnerTypes' ? [] : params.partnerTypes,
+    relationStatuses: exclude === 'relationStatuses' ? [] : params.relationStatuses,
+    currentStatuses: exclude === 'currentStatuses' ? [] : params.currentStatuses,
+  });
+}
+
 export function recountChips(
   rows: MonthlyReportRow[],
   chips: MonthlyChipOption[],

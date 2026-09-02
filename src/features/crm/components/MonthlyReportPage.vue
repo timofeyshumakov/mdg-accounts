@@ -511,7 +511,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, ref, type Ref } from 'vue';
 import LoadingProgress from '../../../components/LoadingProgress.vue';
 import type { FilterOption } from '../functions/crmFilters';
 import { runWhenBx24Ready } from '../functions/bitrixReady';
@@ -543,6 +543,7 @@ import MonthlyTasksDialog from './MonthlyTasksDialog.vue';
 import MonthlyFieldEditDialog from './MonthlyFieldEditDialog.vue';
 import {
   filterMonthlyReportRows,
+  filterMonthlyReportRowsForChipCounts,
   hasNextStep,
   hasTouchesInPeriod,
   monthlyMonthOptions,
@@ -576,9 +577,9 @@ const search = ref('');
 const selectedAssigned = ref<string[]>([]);
 const selectedMonths = ref<number[]>([]);
 const selectedYears = ref<string[]>([]);
-const selectedPartnerTypes = reactive<string[]>([]);
-const selectedRelationStatuses = reactive<string[]>([]);
-const selectedCurrentStatuses = reactive<string[]>([]);
+const selectedPartnerTypes = ref<string[]>([]);
+const selectedRelationStatuses = ref<string[]>([]);
+const selectedCurrentStatuses = ref<string[]>([]);
 
 const touchesDialogOpen = ref(false);
 const touchesDialogPartner = ref('');
@@ -592,9 +593,21 @@ const submitError = ref('');
 const attentionFilter = ref<'all' | 'no-touches' | 'no-next-step'>('all');
 
 const insightLinks = [
-  { id: 'plan', title: 'План по привлечению и развитию контактов' },
-  { id: 'competitor', title: 'Конкурентные мероприятия и наблюдения' },
-  { id: 'pain', title: 'Боли и предложения по улучшению' },
+  {
+    id: 'plan',
+    title: 'План по привлечению и развитию контактов',
+    path: '/crm/type/1262/list/category/0/',
+  },
+  {
+    id: 'competitor',
+    title: 'Конкурентные мероприятия и наблюдения',
+    path: '/crm/type/1210/list/category/0/',
+  },
+  {
+    id: 'pain',
+    title: 'Боли и предложения по улучшению',
+    path: '/crm/type/1266/list/category/0/',
+  },
 ] as const;
 
 const editingCell = ref<{ rowId: string; field: 'interest' } | null>(null);
@@ -645,15 +658,17 @@ const headers = [
   { title: 'Действия', key: 'actions', align: 'center' as const, sortable: false },
 ];
 
-const baseFilteredRows = computed(() => filterMonthlyReportRows(rows.value, {
+const listFilterParams = computed(() => ({
   search: search.value,
   assignedIds: selectedAssigned.value,
   months: selectedMonths.value,
   years: selectedYears.value,
-  partnerTypes: [...selectedPartnerTypes],
-  relationStatuses: [...selectedRelationStatuses],
-  currentStatuses: [...selectedCurrentStatuses],
+  partnerTypes: selectedPartnerTypes.value,
+  relationStatuses: selectedRelationStatuses.value,
+  currentStatuses: selectedCurrentStatuses.value,
 }));
+
+const baseFilteredRows = computed(() => filterMonthlyReportRows(rows.value, listFilterParams.value));
 
 const touchesPeriod = computed(() =>
   resolveTouchesPeriod(selectedMonths.value, selectedYears.value),
@@ -670,25 +685,31 @@ const stats = computed(() => {
 });
 
 const filteredRows = computed(() => filterMonthlyReportRows(rows.value, {
-  search: search.value,
-  assignedIds: selectedAssigned.value,
-  months: selectedMonths.value,
-  years: selectedYears.value,
-  partnerTypes: [...selectedPartnerTypes],
-  relationStatuses: [...selectedRelationStatuses],
-  currentStatuses: [...selectedCurrentStatuses],
+  ...listFilterParams.value,
   onlyNoTouches: attentionFilter.value === 'no-touches',
   onlyNoNextStep: attentionFilter.value === 'no-next-step',
 }));
 
 const partnerTypeChips = computed(() =>
-  recountChips(rows.value, partnerTypeChipDefs.value, 'partnerTypeId'),
+  recountChips(
+    filterMonthlyReportRowsForChipCounts(rows.value, listFilterParams.value, 'partnerTypes'),
+    partnerTypeChipDefs.value,
+    'partnerTypeId',
+  ),
 );
 const relationStatusChips = computed(() =>
-  recountChips(rows.value, relationStatusChipDefs.value, 'relationStatusId'),
+  recountChips(
+    filterMonthlyReportRowsForChipCounts(rows.value, listFilterParams.value, 'relationStatuses'),
+    relationStatusChipDefs.value,
+    'relationStatusId',
+  ),
 );
 const currentStatusChips = computed(() =>
-  recountChips(rows.value, currentStatusChipDefs.value, 'currentStatusId'),
+  recountChips(
+    filterMonthlyReportRowsForChipCounts(rows.value, listFilterParams.value, 'currentStatuses'),
+    currentStatusChipDefs.value,
+    'currentStatusId',
+  ),
 );
 
 const currentStatusOptions = computed(() =>
@@ -705,22 +726,22 @@ const fieldEditorPlaceholder = computed(() => fieldEditorTitle.value);
 const fieldEditorOptions = computed(() => nosologyOptions.value);
 
 const tableTitle = computed(() => {
-  if (selectedPartnerTypes.length === 1 && selectedPartnerTypes[0] === 'new') {
+  if (selectedPartnerTypes.value.length === 1 && selectedPartnerTypes.value[0] === 'new') {
     return 'Новые партнеры';
   }
-  if (selectedPartnerTypes.length === 1 && selectedPartnerTypes[0] === 'active') {
+  if (selectedPartnerTypes.value.length === 1 && selectedPartnerTypes.value[0] === 'active') {
     return 'Действующие партнеры';
   }
   return 'Партнеры';
 });
 
-function toggleChip(list: string[], id: string) {
-  const index = list.indexOf(id);
+function toggleChip(list: Ref<string[]>, id: string) {
+  const index = list.value.indexOf(id);
   if (index >= 0) {
-    list.splice(index, 1);
-  } else {
-    list.push(id);
+    list.value = list.value.filter((item) => item !== id);
+    return;
   }
+  list.value = [...list.value, id];
 }
 
 function isAllSelected(
@@ -756,8 +777,8 @@ function toggleAttentionFilter(filter: 'no-touches' | 'no-next-step') {
   attentionFilter.value = attentionFilter.value === filter ? 'all' : filter;
 }
 
-function onInsightClick(link: { id: string; title: string }) {
-  window.alert(`Раздел «${link.title}» — в разработке`);
+function onInsightClick(link: { path: string }) {
+  openLink(link.path);
 }
 
 function startEditing(rowId: string, field: 'interest') {
