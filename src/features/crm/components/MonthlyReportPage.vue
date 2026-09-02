@@ -247,7 +247,7 @@
       </div>
 
       <section class="report-table-section">
-        <v-card class="report-table-card report-table-card--sticky panel">
+        <v-card class="report-table-card report-table-card--sticky panel monthly-report-table-card">
           <v-card-title class="report-table-title">
             {{ tableTitle }}
             <span class="monthly-report__table-count">{{ filteredRows.length }}</span>
@@ -511,7 +511,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, type Ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, type Ref, watch } from 'vue';
 import LoadingProgress from '../../../components/LoadingProgress.vue';
 import type { FilterOption } from '../functions/crmFilters';
 import { runWhenBx24Ready } from '../functions/bitrixReady';
@@ -554,7 +554,14 @@ import {
   type MonthlyTouchItem,
   type TouchKind,
 } from '../mock/monthlyReportData';
+import { useStickyReportTableHeaders } from '../../../composables/useStickyReportTableHeaders';
 // import underConstructionSrc from '../assets/under-construction.png';
+
+const {
+  mountStickyReportTableHeaders,
+  refreshStickyReportTableHeaders,
+  unmountStickyReportTableHeaders,
+} = useStickyReportTableHeaders();
 
 const props = defineProps<{
   assignedOptions: FilterOption[];
@@ -973,6 +980,23 @@ async function submitRow(row: MonthlyReportRow) {
   }
 }
 
+async function refreshTableScroll() {
+  await nextTick();
+  refreshStickyReportTableHeaders();
+}
+
+watch(filteredRows, () => {
+  void refreshTableScroll();
+});
+
+watch(isLoading, (loading) => {
+  if (loading) {
+    return;
+  }
+  mountStickyReportTableHeaders();
+  void refreshTableScroll();
+});
+
 async function loadData() {
   isLoading.value = true;
   loadingProgress.value = 0;
@@ -1003,5 +1027,9 @@ async function loadData() {
 
 onMounted(() => {
   void runWhenBx24Ready(loadData);
+});
+
+onUnmounted(() => {
+  unmountStickyReportTableHeaders();
 });
 </script>
