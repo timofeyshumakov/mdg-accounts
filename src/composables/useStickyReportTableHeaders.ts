@@ -128,7 +128,7 @@ function updateBinding(binding: StickyTableBinding) {
   const headerHeight = binding.thead.offsetHeight
   const shouldShow = theadRect.top <= topOffset && rootRect.bottom > topOffset + headerHeight
 
-  binding.wrapper.style.overflowX = 'auto'
+  binding.wrapper.style.overflow = 'auto'
   binding.wrapper.style.maxWidth = '100%'
 
   if (!shouldShow) {
@@ -181,7 +181,7 @@ function createBinding(root: HTMLElement): StickyTableBinding | null {
     return null
   }
 
-  wrapper.style.overflowX = 'auto'
+  wrapper.style.overflow = 'auto'
   wrapper.style.maxWidth = '100%'
 
   const cloneHost = document.createElement('div')
