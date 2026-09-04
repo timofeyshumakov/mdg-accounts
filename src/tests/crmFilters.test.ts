@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildMonthYearDateRanges,
   buildYearOptions,
+  collectPartnerIdsByAssigned,
   contactPassesFilters,
   createEmptyFilters,
   eventPassesFilters,
@@ -91,5 +92,36 @@ describe('crmFilters', () => {
       { ...createEmptyFilters(), months: [8], years: ['2026'] },
       new Set(['200']),
     )).toBe(false);
+  });
+
+  it('filters events by partner contacts of selected assigned users', () => {
+    const event = {
+      assignedById: 82,
+      contactId: 100,
+      ufCrm38_1745307580193: '2026-08-01',
+    };
+
+    expect(eventPassesFilters(
+      event,
+      { ...createEmptyFilters(), assignedIds: ['184'] },
+      { partnerIdsByAssigned: new Set(['100']) },
+    )).toBe(true);
+
+    expect(eventPassesFilters(
+      event,
+      { ...createEmptyFilters(), assignedIds: ['184'] },
+      { partnerIdsByAssigned: new Set(['200']) },
+    )).toBe(false);
+  });
+
+  it('collects partner ids by assigned', () => {
+    const contacts = [
+      { ID: '100', ASSIGNED_BY_ID: '184' },
+      { ID: '200', ASSIGNED_BY_ID: '197' },
+      { ID: '300', ASSIGNED_BY_ID: '184' },
+    ];
+
+    expect([...collectPartnerIdsByAssigned(contacts, ['184'])].sort()).toEqual(['100', '300']);
+    expect(collectPartnerIdsByAssigned(contacts, []).size).toBe(0);
   });
 });

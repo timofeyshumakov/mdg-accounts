@@ -69,6 +69,7 @@ import {
 import { buildPartnersPotentialChartItemsFromEvents } from './functions/partnersPotentialChart';
 import {
   buildYearOptions,
+  collectPartnerIdsByAssigned,
   collectPartnerIdsFromEvents,
   contactPassesFilters,
   createEmptyFilters,
@@ -131,18 +132,23 @@ function finishLoading() {
 
 async function recomputeDashboard() {
   const currentFilters = filters.value;
+  const nosology = partnerNosologyData.value;
+
+  const partnerIdsByAssigned = currentFilters.assignedIds.length && nosology
+    ? collectPartnerIdsByAssigned(nosology.contacts, currentFilters.assignedIds)
+    : null;
+
   const dateFilteredOurEvents = ourEventsRaw.value.filter((event) =>
-    eventPassesFilters(event, currentFilters),
+    eventPassesFilters(event, currentFilters, { partnerIdsByAssigned }),
   );
   const dateFilteredCompetitorEvents = competitorEventsRaw.value.filter((event) =>
-    eventPassesFilters(event, currentFilters),
+    eventPassesFilters(event, currentFilters, { partnerIdsByAssigned }),
   );
 
   const partnerIdsFromEvents = (currentFilters.months.length || currentFilters.years.length)
     ? collectPartnerIdsFromEvents(dateFilteredOurEvents)
     : null;
 
-  const nosology = partnerNosologyData.value;
   const filteredContacts = nosology
     ? nosology.contacts.filter((contact) =>
       contactPassesFilters(contact, currentFilters, partnerIdsFromEvents),

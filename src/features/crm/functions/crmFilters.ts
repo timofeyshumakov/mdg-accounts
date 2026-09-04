@@ -227,13 +227,57 @@ export function matchesEventDate(
 export function eventPassesFilters(
   event: Record<string, unknown>,
   filters: CrmDashboardFilters,
+  options: { partnerIdsByAssigned?: Set<string> | null } = {},
 ): boolean {
-  return matchesAssigned(getEventAssignedValue(event), filters.assignedIds)
-    && matchesPartner(
-      getEventPartnerValue(event, EVENT_PARTNER_FIELD, EVENT_PARTNER_FIELD_META),
-      filters.partnerIds,
-    )
-    && matchesEventDate(getEventStartDateValue(event), filters.months, filters.years);
+  const partnerValue = getEventPartnerValue(
+    event,
+    EVENT_PARTNER_FIELD,
+    EVENT_PARTNER_FIELD_META,
+  );
+
+  if (!matchesPartner(partnerValue, filters.partnerIds)) {
+    return false;
+  }
+
+  if (!matchesEventDate(getEventStartDateValue(event), filters.months, filters.years)) {
+    return false;
+  }
+
+  if (!filters.assignedIds.length) {
+    return true;
+  }
+
+  // Ответственный в фильтре = ответственный контакта-партнёра (отдел партнёров),
+  // а не assignedById самого мероприятия.
+  const partnerIdsByAssigned = options.partnerIdsByAssigned;
+  if (partnerIdsByAssigned) {
+    const eventPartnerIds = extractEntityIds(partnerValue);
+    return eventPartnerIds.some((id) => partnerIdsByAssigned.has(String(id)));
+  }
+
+  return matchesAssigned(getEventAssignedValue(event), filters.assignedIds);
+}
+
+export function collectPartnerIdsByAssigned(
+  contacts: Record<string, unknown>[],
+  assignedIds: string[],
+): Set<string> {
+  const ids = new Set<string>();
+  if (!assignedIds.length) {
+    return ids;
+  }
+
+  contacts.forEach((contact) => {
+    if (!matchesAssigned(getContactAssignedValue(contact), assignedIds)) {
+      return;
+    }
+    const contactId = String(contact.ID ?? contact.id ?? '').trim();
+    if (contactId) {
+      ids.add(contactId);
+    }
+  });
+
+  return ids;
 }
 
 export function contactPassesFilters(
