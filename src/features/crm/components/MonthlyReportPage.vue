@@ -347,7 +347,7 @@
               <button
                 type="button"
                 class="event-link"
-                @click="openInNewWindow(item.agreementLink)"
+                @click="openLink(item.agreementLink)"
               >
                 Открыть
               </button>
@@ -917,7 +917,7 @@ function openContact(contactId: string) {
   if (!contactId) {
     return;
   }
-  openBitrixPathInNewWindow(buildContactDetailsPath(contactId));
+  openBitrixPath(buildContactDetailsPath(contactId));
 }
 
 function openReports(row: MonthlyReportRow) {
@@ -925,7 +925,7 @@ function openReports(row: MonthlyReportRow) {
     return;
   }
   const label = [row.partnerName, row.organization].filter(Boolean).join(', ');
-  openBitrixPathInNewWindow(buildMonthlyReportSpaListPath(row.id, label || undefined));
+  openBitrixPath(buildMonthlyReportSpaListPath(row.id, label || undefined));
 }
 
 function touchCount(row: MonthlyReportRow, kind: TouchKind): number {
