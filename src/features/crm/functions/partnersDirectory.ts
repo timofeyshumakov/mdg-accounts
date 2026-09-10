@@ -1,4 +1,4 @@
-import { fetchAllPages } from './bitrixApi';
+import { fetchAllContactList } from './bitrixApi';
 import { getBx24 } from './bitrixClient';
 import { openBitrixPath } from './bitrixPath';
 import { appendListFilterValues } from './bitrixListFilter';
@@ -156,7 +156,7 @@ export async function loadPartnerContactIdsByNosology(
   nosologyField: string = 'UF_CRM_1782832034',
 ): Promise<string[]> {
   const typeIds = await getPartnerTypeIds();
-  const contacts = await fetchAllPages<{ ID?: string | number }>('crm.contact.list', {
+  const contacts = await fetchAllContactList<{ ID?: string | number }>({
     filter: {
       ...buildPartnersContactFilter(typeIds),
       [nosologyField]: nosologyId,

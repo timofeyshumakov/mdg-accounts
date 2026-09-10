@@ -1,5 +1,5 @@
 import type { ChartItem } from '../mock/dashboardData';
-import { fetchAllCrmItems, fetchAllPages } from './bitrixApi';
+import { fetchAllCrmItems, fetchAllContactList } from './bitrixApi';
 import {
   buildCrmItemListSelect,
   extractEntityIds,
@@ -224,7 +224,7 @@ export async function openPartnerEventsList(
   let filterLabel = partnerLabel;
 
   try {
-    const contacts = await fetchAllPages<ContactListItem>('crm.contact.list', {
+    const contacts = await fetchAllContactList<ContactListItem>({
       filter: { ID: partnerId },
       select: ['ID', 'NAME', 'LAST_NAME', 'SECOND_NAME'],
     });
@@ -253,7 +253,7 @@ async function loadPartnerNames(
     return labels;
   }
 
-  const contacts = await fetchAllPages<ContactListItem>('crm.contact.list', {
+  const contacts = await fetchAllContactList<ContactListItem>({
     filter: { '@ID': partnerIds },
     select: ['ID', 'NAME', 'LAST_NAME', 'SECOND_NAME'],
   });

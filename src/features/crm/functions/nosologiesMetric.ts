@@ -1,4 +1,4 @@
-import { callBxMethod, fetchAllPages } from './bitrixApi';
+import { callBxMethod, fetchAllContactList, fetchAllPages } from './bitrixApi';
 import {
   buildContactListSelect,
   extractScalarValues,
@@ -247,7 +247,7 @@ export async function loadPartnerContactsNosologies(): Promise<PartnerNosologyDa
   const { fieldName, fieldMeta, userField } = nosologyField;
   const labelMap = await loadNosologyLabelMap(userField, fieldMeta);
 
-  const contacts = await fetchAllPages<Record<string, unknown>>('crm.contact.list', {
+  const contacts = await fetchAllContactList<Record<string, unknown>>({
     filter: buildPartnersContactFilter(typeIds),
     select: buildContactListSelect(fieldName, fieldMeta),
   });

@@ -1,4 +1,4 @@
-import { callBxMethod, fetchAllCrmItems, fetchAllPages } from './bitrixApi';
+import { callBxMethod, fetchAllCrmItems, fetchAllContactList, fetchAllPages } from './bitrixApi';
 import { extractEntityIds } from './bitrixFields';
 import {
   buildPartnersContactFilter,
@@ -427,7 +427,7 @@ export async function loadAssignedUsers(): Promise<FilterOption[]> {
 
 export async function loadPartnerOptions(): Promise<FilterOption[]> {
   const typeIds = await getPartnerTypeIds();
-  const contacts = await fetchAllPages<Record<string, unknown>>('crm.contact.list', {
+  const contacts = await fetchAllContactList<Record<string, unknown>>({
     filter: buildPartnersContactFilter(typeIds),
     select: ['ID', 'NAME', 'LAST_NAME', 'SECOND_NAME'],
   });

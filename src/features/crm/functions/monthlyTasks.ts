@@ -1,14 +1,25 @@
-import { callBxMethod, extractPageItems } from './bitrixApi';
+import {
+  callBxBatch,
+  callBxMethod,
+  extractPageItems,
+  readBatchResultData,
+  type Bx24BatchCommands,
+} from './bitrixApi';
 import { getBx24 } from './bitrixClient';
 import { extractScalarValues } from './bitrixFields';
 import { NAV_EXTERNAL_PATHS } from './crmNavigation';
-import type { Bx24CallResult } from '../../../env.d';
 
 export const TASKS_GROUP_ID = 1314;
 
 export const TASKS_GROUP_LIST_PATH = NAV_EXTERNAL_PATHS.tasks;
 
 const TASKS_PAGE_SIZE = 50;
+/** Сколько страниц tasks.task.list за один callBatch. */
+const TASKS_LIST_PAGES_PER_BATCH = 10;
+/** Сколько list-запросов по контактам в одном callBatch. */
+const TASKS_LIST_CONTACTS_PER_BATCH = 50;
+const TASKS_GET_PER_BATCH = 50;
+const TASK_LIST_SELECT = ['ID', 'TITLE', 'GROUP_ID', 'UF_CRM_TASK'] as const;
 
 export interface MonthlyTaskItem {
   id: string;
@@ -122,33 +133,181 @@ function parseTaskGetPayload(
   };
 }
 
-/** Пагинация через start — BX24.more()/next() для tasks.task.list ненадёжны. */
+function buildTaskListParams(
+  filter: Record<string, unknown>,
+  start = 0,
+): Record<string, unknown> {
+  return {
+    filter,
+    select: [...TASK_LIST_SELECT],
+    start,
+  };
+}
+
+function canUseBatch(): boolean {
+  return typeof getBx24()?.callBatch === 'function';
+}
+
+/** Одна страница tasks.task.list (fallback без batch). */
+async function fetchTasksPage(
+  filter: Record<string, unknown>,
+  start = 0,
+): Promise<Record<string, unknown>[]> {
+  const data = await callBxMethod<unknown>(
+    'tasks.task.list',
+    buildTaskListParams(filter, start),
+  );
+  return extractPageItems<Record<string, unknown>>(data);
+}
+
+/**
+ * Все страницы tasks.task.list.
+ * При доступном callBatch — несколько start в одном batch.
+ */
 async function fetchAllTasks(
   filter: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
   const items: Record<string, unknown>[] = [];
+
+  if (!canUseBatch()) {
+    let start = 0;
+    for (;;) {
+      const page = await fetchTasksPage(filter, start);
+      items.push(...page);
+      if (page.length < TASKS_PAGE_SIZE) {
+        break;
+      }
+      start += TASKS_PAGE_SIZE;
+      if (start > 5000) {
+        break;
+      }
+    }
+    return items;
+  }
+
   let start = 0;
+  while (start <= 5000) {
+    const pageStarts: number[] = [];
+    for (
+      let index = 0;
+      index < TASKS_LIST_PAGES_PER_BATCH && start + index * TASKS_PAGE_SIZE <= 5000;
+      index += 1
+    ) {
+      pageStarts.push(start + index * TASKS_PAGE_SIZE);
+    }
 
-  for (;;) {
-    const data = await callBxMethod<unknown>('tasks.task.list', {
-      filter,
-      select: ['ID', 'TITLE', 'GROUP_ID', 'UF_CRM_TASK'],
-      start,
+    const commands: Bx24BatchCommands = {};
+    pageStarts.forEach((pageStart, index) => {
+      commands[`p${index}`] = {
+        method: 'tasks.task.list',
+        params: buildTaskListParams(filter, pageStart),
+      };
     });
-    const page = extractPageItems<Record<string, unknown>>(data);
-    items.push(...page);
 
-    if (page.length < TASKS_PAGE_SIZE) {
+    const batchResults = await callBxBatch(commands);
+    let reachedEnd = false;
+
+    for (let index = 0; index < pageStarts.length; index += 1) {
+      const data = readBatchResultData(batchResults[`p${index}`]);
+      if (data == null) {
+        if (index === 0 && start === 0) {
+          throw new Error('Не удалось загрузить список задач');
+        }
+        reachedEnd = true;
+        break;
+      }
+
+      const page = extractPageItems<Record<string, unknown>>(data);
+      items.push(...page);
+
+      if (page.length < TASKS_PAGE_SIZE) {
+        reachedEnd = true;
+        break;
+      }
+    }
+
+    if (reachedEnd) {
       break;
     }
 
-    start += TASKS_PAGE_SIZE;
-    if (start > 5000) {
-      break;
-    }
+    start += pageStarts.length * TASKS_PAGE_SIZE;
   }
 
   return items;
+}
+
+/** Пакетный tasks.task.list по одному UF_CRM_TASK на контакт. */
+async function fetchTasksListByContactsBatch(
+  contactIds: string[],
+  withGroupId: boolean,
+): Promise<Map<string, Record<string, unknown>[]>> {
+  const result = new Map<string, Record<string, unknown>[]>();
+  if (!contactIds.length) {
+    return result;
+  }
+
+  if (!canUseBatch()) {
+    for (const contactId of contactIds) {
+      const filter: Record<string, unknown> = {
+        UF_CRM_TASK: buildContactCrmTaskValue(contactId),
+      };
+      if (withGroupId) {
+        filter.GROUP_ID = TASKS_GROUP_ID;
+      }
+      result.set(contactId, await fetchAllTasks(filter));
+    }
+    return result;
+  }
+
+  for (let index = 0; index < contactIds.length; index += TASKS_LIST_CONTACTS_PER_BATCH) {
+    const chunk = contactIds.slice(index, index + TASKS_LIST_CONTACTS_PER_BATCH);
+    const commands: Bx24BatchCommands = {};
+
+    chunk.forEach((contactId, cmdIndex) => {
+      const filter: Record<string, unknown> = {
+        UF_CRM_TASK: buildContactCrmTaskValue(contactId),
+      };
+      if (withGroupId) {
+        filter.GROUP_ID = TASKS_GROUP_ID;
+      }
+      commands[`c${cmdIndex}`] = {
+        method: 'tasks.task.list',
+        params: buildTaskListParams(filter, 0),
+      };
+    });
+
+    const batchResults = await callBxBatch(commands);
+    const needMorePages: string[] = [];
+
+    chunk.forEach((contactId, cmdIndex) => {
+      const data = readBatchResultData(batchResults[`c${cmdIndex}`]);
+      if (data == null) {
+        result.set(contactId, []);
+        return;
+      }
+
+      const page = extractPageItems<Record<string, unknown>>(data);
+      result.set(contactId, page);
+
+      if (page.length >= TASKS_PAGE_SIZE) {
+        needMorePages.push(contactId);
+      }
+    });
+
+    // Редкие контакты с >50 задачами — добираем остальные страницы batch-пагинацией.
+    for (const contactId of needMorePages) {
+      const filter: Record<string, unknown> = {
+        UF_CRM_TASK: buildContactCrmTaskValue(contactId),
+      };
+      if (withGroupId) {
+        filter.GROUP_ID = TASKS_GROUP_ID;
+      }
+      const all = await fetchAllTasks(filter);
+      result.set(contactId, all);
+    }
+  }
+
+  return result;
 }
 
 async function fetchTaskUfByIds(
@@ -160,13 +319,10 @@ async function fetchTaskUfByIds(
     return result;
   }
 
-  const bx24 = getBx24();
-
-  if (typeof bx24?.callBatch === 'function') {
-    const chunkSize = 50;
-    for (let index = 0; index < uniqueIds.length; index += chunkSize) {
-      const chunk = uniqueIds.slice(index, index + chunkSize);
-      const commands: Record<string, { method: string; params: Record<string, unknown> }> = {};
+  if (canUseBatch()) {
+    for (let index = 0; index < uniqueIds.length; index += TASKS_GET_PER_BATCH) {
+      const chunk = uniqueIds.slice(index, index + TASKS_GET_PER_BATCH);
+      const commands: Bx24BatchCommands = {};
       chunk.forEach((taskId, cmdIndex) => {
         commands[`t${cmdIndex}`] = {
           method: 'tasks.task.get',
@@ -177,22 +333,13 @@ async function fetchTaskUfByIds(
         };
       });
 
-      const batchResults = await new Promise<Record<string, Bx24CallResult>>((resolve, reject) => {
-        bx24.callBatch?.(commands, (res) => {
-          if (!res) {
-            reject(new Error('Пустой ответ callBatch'));
-            return;
-          }
-          resolve(res as Record<string, Bx24CallResult>);
-        });
-      });
-
+      const batchResults = await callBxBatch(commands);
       chunk.forEach((taskId, cmdIndex) => {
-        const entry = batchResults[`t${cmdIndex}`];
-        if (!entry || entry.error()) {
+        const data = readBatchResultData(batchResults[`t${cmdIndex}`]);
+        if (data == null) {
           return;
         }
-        const parsed = parseTaskGetPayload(entry.data(), taskId);
+        const parsed = parseTaskGetPayload(data, taskId);
         if (parsed) {
           result.set(parsed.id, {
             title: parsed.title,
@@ -295,42 +442,36 @@ export async function loadTasksByContactIds(
     }
 
     const missingContacts = uniqueIds.filter((id) => !(result.get(id)?.length));
-    const chunkSize = 20;
+    if (!missingContacts.length) {
+      return result;
+    }
 
-    for (let index = 0; index < missingContacts.length; index += chunkSize) {
-      const chunk = missingContacts.slice(index, index + chunkSize);
-      const crmValues = chunk.map(buildContactCrmTaskValue);
+    let byContact: Map<string, Record<string, unknown>[]>;
+    try {
+      byContact = await fetchTasksListByContactsBatch(missingContacts, true);
+    } catch (groupFilterError) {
+      console.warn('Batch list с GROUP_ID не удался, пробуем без группы:', groupFilterError);
+      byContact = await fetchTasksListByContactsBatch(missingContacts, false);
+    }
 
-      try {
-        let tasks: Record<string, unknown>[] = [];
-        try {
-          tasks = await fetchAllTasks({
-            GROUP_ID: TASKS_GROUP_ID,
-            UF_CRM_TASK: chunk.length === 1 ? crmValues[0] : crmValues,
+    const stillUnresolved: string[] = [];
+
+    byContact.forEach((tasks, contactId) => {
+      const unresolved = ingestList(tasks, [contactId]);
+      stillUnresolved.push(...unresolved);
+    });
+
+    if (stillUnresolved.length) {
+      const details = await fetchTaskUfByIds(stillUnresolved);
+      details.forEach((detail, taskId) => {
+        detail.contactIds.forEach((contactId) => {
+          appendItem({
+            id: taskId,
+            title: detail.title,
+            contactId,
           });
-        } catch {
-          tasks = await fetchAllTasks({
-            UF_CRM_TASK: chunk.length === 1 ? crmValues[0] : crmValues,
-          });
-        }
-
-        unresolvedIds = ingestList(tasks, chunk.length === 1 ? chunk : []);
-
-        if (unresolvedIds.length && chunk.length > 1) {
-          const details = await fetchTaskUfByIds(unresolvedIds);
-          details.forEach((detail, taskId) => {
-            detail.contactIds.forEach((contactId) => {
-              appendItem({
-                id: taskId,
-                title: detail.title,
-                contactId,
-              });
-            });
-          });
-        }
-      } catch (error) {
-        console.warn('Не удалось догрузить задачи по UF_CRM_TASK:', error);
-      }
+        });
+      });
     }
   } catch (error) {
     console.warn('Не удалось загрузить задачи контактов:', error);

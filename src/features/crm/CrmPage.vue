@@ -10,7 +10,7 @@
     <v-main class="crm-page">
       <section class="crm-nav-panel panel">
         <CrmNav
-          :items="navItems"
+          :groups="navGroups"
           :active-id="activeNavId"
           @navigate="onNavigate"
         />
@@ -52,6 +52,7 @@ import CrmChartsPanel from './components/CrmChartsPanel.vue';
 import CrmFiltersPanel from './components/CrmFiltersPanel.vue';
 import MonthlyReportPage from './components/MonthlyReportPage.vue';
 import {
+  navGroups,
   navItems,
   summaryMetrics as defaultSummaryMetrics,
   charts as defaultCharts,

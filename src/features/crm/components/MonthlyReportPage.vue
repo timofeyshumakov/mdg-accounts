@@ -115,24 +115,7 @@
 
         <div class="monthly-filters-row">
           <div class="monthly-filter-groups">
-            <article class="monthly-filter-card">
-              <h4 class="monthly-filter-card__title">Тип партнера</h4>
-              <div class="monthly-filter-card__chips">
-                <button
-                  v-for="chip in partnerTypeChips"
-                  :key="chip.id"
-                  type="button"
-                  class="monthly-chip"
-                  :class="{ 'monthly-chip--active': selectedPartnerTypes.includes(chip.id) }"
-                  @click="toggleChip(selectedPartnerTypes, chip.id)"
-                >
-                  <span class="monthly-chip__label">{{ chip.label }}</span>
-                  <span class="monthly-chip__count">{{ chip.count }}</span>
-                </button>
-              </div>
-            </article>
-
-            <article class="monthly-filter-card">
+            <article class="monthly-filter-card monthly-filter-card--grow">
               <h4 class="monthly-filter-card__title">Статус отношений</h4>
               <div class="monthly-filter-card__chips">
                 <button
@@ -141,7 +124,7 @@
                   type="button"
                   class="monthly-chip"
                   :class="{ 'monthly-chip--active': selectedRelationStatuses.includes(chip.id) }"
-                  @click="toggleChip(selectedRelationStatuses, chip.id)"
+                  @click="toggleRelationStatus(chip.id)"
                 >
                   <span class="monthly-chip__label">{{ chip.label }}</span>
                   <span class="monthly-chip__count">{{ chip.count }}</span>
@@ -158,7 +141,7 @@
                   type="button"
                   class="monthly-chip"
                   :class="{ 'monthly-chip--active': selectedCurrentStatuses.includes(chip.id) }"
-                  @click="toggleChip(selectedCurrentStatuses, chip.id)"
+                  @click="toggleCurrentStatus(chip.id)"
                 >
                   <span class="monthly-chip__label">{{ chip.label }}</span>
                   <span class="monthly-chip__count">{{ chip.count }}</span>
@@ -230,6 +213,22 @@
             <span class="monthly-stats__label">Нет следующего шага</span>
             <strong class="monthly-stats__value monthly-stats__value--danger">{{ stats.noNextStep }}</strong>
             <span class="monthly-stats__badge monthly-stats__badge--danger">Требует внимания</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="monthly-stats__card monthly-stats__card--report"
+          :class="{ 'monthly-stats__card--active': attentionFilter === 'no-report' }"
+          @click="toggleAttentionFilter('no-report')"
+        >
+          <span class="monthly-stats__icon monthly-stats__icon--report">
+            <v-icon icon="$fileDocumentOutline" size="22" />
+          </span>
+          <div class="monthly-stats__body">
+            <span class="monthly-stats__label">Нет отчета</span>
+            <strong class="monthly-stats__value monthly-stats__value--report">{{ stats.noReport }}</strong>
+            <span class="monthly-stats__badge monthly-stats__badge--report">Требует внимания</span>
           </div>
         </button>
       </section>
@@ -601,10 +600,6 @@ const isLoading = ref(true);
 const loadingProgress = ref(0);
 const loadingMessage = ref('Загрузка партнёров…');
 const rows = ref<MonthlyReportRow[]>([]);
-const partnerTypeChipDefs = ref<MonthlyChipOption[]>([
-  { id: 'active', label: 'Действующие партнеры', count: 0 },
-  { id: 'new', label: 'Новые партнеры', count: 0 },
-]);
 const relationStatusChipDefs = ref<MonthlyChipOption[]>([]);
 const relationStatusOptions = ref<Array<{ id: string; title: string }>>([]);
 const currentStatusChipDefs = ref<MonthlyChipOption[]>([]);
@@ -614,7 +609,6 @@ const search = ref('');
 const selectedAssigned = ref<string[]>([]);
 const selectedMonths = ref<number[]>([]);
 const selectedYears = ref<string[]>([]);
-const selectedPartnerTypes = ref<string[]>([]);
 const selectedRelationStatuses = ref<string[]>([]);
 const selectedCurrentStatuses = ref<string[]>([]);
 
@@ -629,7 +623,7 @@ const tasksDialogPartner = ref('');
 const tasksDialogItems = ref<MonthlyTaskItem[]>([]);
 const sendingRowId = ref<string | null>(null);
 const submitError = ref('');
-const attentionFilter = ref<'all' | 'no-touches' | 'no-next-step'>('all');
+const attentionFilter = ref<'all' | 'no-touches' | 'no-next-step' | 'no-report'>('all');
 const contactIdsWithReport = ref<Set<string>>(new Set());
 const userDisplaysById = ref<Map<string, UserDisplay>>(new Map());
 const failedAvatars = ref<Set<string>>(new Set());
@@ -705,7 +699,7 @@ const listFilterParams = computed(() => ({
   assignedIds: selectedAssigned.value,
   months: selectedMonths.value,
   years: selectedYears.value,
-  partnerTypes: selectedPartnerTypes.value,
+  partnerTypes: [] as string[],
   relationStatuses: selectedRelationStatuses.value,
   currentStatuses: selectedCurrentStatuses.value,
 }));
@@ -727,6 +721,7 @@ const stats = computed(() => {
     total: list.length,
     noTouches: list.filter((row) => !hasTouchesInPeriod(row, months, years)).length,
     noNextStep: list.filter((row) => !hasNextStep(row)).length,
+    noReport: list.filter((row) => !contactIdsWithReport.value.has(String(row.id))).length,
   };
 });
 
@@ -734,15 +729,10 @@ const filteredRows = computed(() => filterMonthlyReportRows(rows.value, {
   ...listFilterParams.value,
   onlyNoTouches: attentionFilter.value === 'no-touches',
   onlyNoNextStep: attentionFilter.value === 'no-next-step',
+  onlyNoReport: attentionFilter.value === 'no-report',
+  reportedContactIds: contactIdsWithReport.value,
 }));
 
-const partnerTypeChips = computed(() =>
-  recountChips(
-    filterMonthlyReportRowsForChipCounts(rows.value, listFilterParams.value, 'partnerTypes'),
-    partnerTypeChipDefs.value,
-    'partnerTypeId',
-  ),
-);
 const relationStatusChips = computed(() =>
   recountChips(
     filterMonthlyReportRowsForChipCounts(rows.value, listFilterParams.value, 'relationStatuses'),
@@ -771,15 +761,7 @@ const fieldEditorPlaceholder = computed(() => fieldEditorTitle.value);
 
 const fieldEditorOptions = computed(() => nosologyOptions.value);
 
-const tableTitle = computed(() => {
-  if (selectedPartnerTypes.value.length === 1 && selectedPartnerTypes.value[0] === 'new') {
-    return 'Новые партнеры';
-  }
-  if (selectedPartnerTypes.value.length === 1 && selectedPartnerTypes.value[0] === 'active') {
-    return 'Действующие партнеры';
-  }
-  return 'Партнеры';
-});
+const tableTitle = computed(() => 'Партнеры');
 
 function getAssignedDisplay(row: MonthlyReportRow): UserDisplay | null {
   if (!row.assignedId) {
@@ -845,13 +827,20 @@ async function refreshUserDisplays(sourceRows: MonthlyReportRow[]) {
   }
 }
 
-function toggleChip(list: Ref<string[]>, id: string) {
-  const index = list.value.indexOf(id);
-  if (index >= 0) {
+function toggleChipList(list: Ref<string[]>, id: string) {
+  if (list.value.includes(id)) {
     list.value = list.value.filter((item) => item !== id);
     return;
   }
   list.value = [...list.value, id];
+}
+
+function toggleRelationStatus(id: string) {
+  toggleChipList(selectedRelationStatuses, id);
+}
+
+function toggleCurrentStatus(id: string) {
+  toggleChipList(selectedCurrentStatuses, id);
 }
 
 function isAllSelected(
@@ -883,7 +872,7 @@ function toggleAllYears(checked: boolean | null) {
     : [];
 }
 
-function toggleAttentionFilter(filter: 'no-touches' | 'no-next-step') {
+function toggleAttentionFilter(filter: 'no-touches' | 'no-next-step' | 'no-report') {
   attentionFilter.value = attentionFilter.value === filter ? 'all' : filter;
 }
 
@@ -1141,7 +1130,6 @@ async function loadData() {
     const data = await loadMonthlyReportData();
     loadingProgress.value = 90;
     rows.value = data.rows;
-    partnerTypeChipDefs.value = data.partnerTypeChips;
     relationStatusChipDefs.value = data.relationStatusChips;
     relationStatusOptions.value = data.relationStatusOptions;
     currentStatusChipDefs.value = data.currentStatusChips;

@@ -1,5 +1,5 @@
 import { callApi } from '../../../functions/callApi';
-import { callBxMethod, fetchAllPages } from './bitrixApi';
+import { callBxMethod, fetchAllContactList } from './bitrixApi';
 import {
   buildContactListSelect,
   extractScalarValues,
@@ -431,7 +431,7 @@ export async function loadMonthlyReportData(
     ? (contactIds.length === 1 ? { ID: contactIds[0] } : { '@ID': contactIds })
     : buildPartnersContactFilter(allTypeIds);
 
-  const contacts = await fetchAllPages<Record<string, unknown>>('crm.contact.list', {
+  const contacts = await fetchAllContactList<Record<string, unknown>>({
     filter,
     select,
   });

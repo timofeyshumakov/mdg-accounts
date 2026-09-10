@@ -100,6 +100,8 @@ export function filterMonthlyReportRows(
     currentStatuses: string[];
     onlyNoTouches?: boolean;
     onlyNoNextStep?: boolean;
+    onlyNoReport?: boolean;
+    reportedContactIds?: Set<string>;
   },
 ): MonthlyReportRow[] {
   const search = params.search.trim().toLowerCase();
@@ -127,6 +129,9 @@ export function filterMonthlyReportRows(
       return false;
     }
     if (params.onlyNoNextStep && hasNextStep(row)) {
+      return false;
+    }
+    if (params.onlyNoReport && params.reportedContactIds?.has(String(row.id))) {
       return false;
     }
     if (search) {
