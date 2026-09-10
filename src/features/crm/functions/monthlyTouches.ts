@@ -13,6 +13,14 @@ export const TOUCHES_ENTITY_TYPE_ID = 1240;
 export const TOUCH_TYPE_FIELD = 'UF_CRM_132_1787151115483';
 export const TOUCH_TYPE_FIELD_CAMEL = 'ufCrm132_1787151115483';
 
+/** Комментарий. */
+export const TOUCH_COMMENT_FIELD = 'ufCrm132_1786008277689';
+export const TOUCH_COMMENT_FIELD_UPPER = 'UF_CRM_132_1786008277689';
+
+/** Дата коммуникации. */
+export const TOUCH_DATE_FIELD = 'ufCrm132_1786008314575';
+export const TOUCH_DATE_FIELD_UPPER = 'UF_CRM_132_1786008314575';
+
 const TOUCH_TYPE_FIELD_META: NamedCrmField = {
   title: 'Вид',
   fieldName: TOUCH_TYPE_FIELD_CAMEL,
@@ -20,8 +28,41 @@ const TOUCH_TYPE_FIELD_META: NamedCrmField = {
   type: 'enumeration',
 };
 
+export interface TouchTypeOption {
+  id: string;
+  title: string;
+  kind: TouchKind;
+}
+
 export function buildTouchDetailsPath(touchId: string | number): string {
   return `/crm/type/${TOUCHES_ENTITY_TYPE_ID}/details/${touchId}/`;
+}
+
+export function buildTouchCreatePath(contactId: string): string {
+  return `/crm/type/${TOUCHES_ENTITY_TYPE_ID}/details/0/?contactId=${encodeURIComponent(contactId)}`;
+}
+
+export function formatTouchDateInput(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function resolveDefaultTouchTypeId(
+  options: TouchTypeOption[],
+  kind?: TouchKind | null,
+): string {
+  if (!options.length) {
+    return '';
+  }
+  if (kind && kind !== 'other') {
+    const match = options.find((option) => option.kind === kind);
+    if (match) {
+      return match.id;
+    }
+  }
+  return options[0].id;
 }
 
 function firstScalar(value: unknown): string {
@@ -102,6 +143,98 @@ async function loadTouchTypeMeta(): Promise<NamedCrmField> {
   return TOUCH_TYPE_FIELD_META;
 }
 
+export async function loadTouchTypeOptions(): Promise<TouchTypeOption[]> {
+  const typeMeta = await loadTouchTypeMeta();
+  const labelMap = buildTypeLabelMap(typeMeta);
+  const options: TouchTypeOption[] = [];
+
+  labelMap.forEach((title, id) => {
+    if (!/^\d+$/.test(id) || options.some((option) => option.id === id)) {
+      return;
+    }
+    options.push({
+      id,
+      title,
+      kind: resolveTouchKind(title),
+    });
+  });
+
+  return options.sort((left, right) => left.title.localeCompare(right.title, 'ru'));
+}
+
+export function buildTouchCreateFields(params: {
+  contactId: string;
+  typeId: string;
+  comment: string;
+  date: string;
+  partnerName?: string;
+}): Record<string, unknown> {
+  const comment = params.comment.trim();
+  const title = comment
+    || [params.partnerName, 'Касание'].filter(Boolean).join(' — ')
+    || 'Касание';
+
+  return {
+    title,
+    contactId: Number(params.contactId) || params.contactId,
+    [TOUCH_TYPE_FIELD_CAMEL]: Number(params.typeId) || params.typeId,
+    [TOUCH_COMMENT_FIELD]: comment,
+    [TOUCH_DATE_FIELD]: params.date,
+  };
+}
+
+export async function createTouchItem(params: {
+  contactId: string;
+  typeId: string;
+  comment: string;
+  date: string;
+  partnerName?: string;
+}): Promise<MonthlyTouchItem> {
+  if (!params.contactId) {
+    throw new Error('Не указан партнёр для касания');
+  }
+  if (!params.typeId) {
+    throw new Error('Не указан вид касания');
+  }
+  if (!params.date) {
+    throw new Error('Не указана дата касания');
+  }
+  if (!params.comment.trim()) {
+    throw new Error('Не указан комментарий к касанию');
+  }
+
+  const fields = buildTouchCreateFields(params);
+  const raw = await callBxMethod<{ item?: Record<string, unknown>; id?: string | number }>(
+    'crm.item.add',
+    {
+      entityTypeId: TOUCHES_ENTITY_TYPE_ID,
+      fields,
+    },
+  );
+
+  const item = (raw?.item ?? raw) as Record<string, unknown>;
+  const typeMeta = await loadTouchTypeMeta();
+  const typeLabelMap = buildTypeLabelMap(typeMeta);
+  const mapped = mapTouchItem(
+    {
+      ...item,
+      title: item?.title ?? fields.title,
+      contactId: item?.contactId ?? fields.contactId,
+      [TOUCH_TYPE_FIELD_CAMEL]: item?.[TOUCH_TYPE_FIELD_CAMEL] ?? params.typeId,
+      createdTime: item?.createdTime
+        ?? `${params.date}T12:00:00`,
+    },
+    typeLabelMap,
+    typeMeta,
+  );
+
+  if (!mapped) {
+    throw new Error('Не удалось создать касание');
+  }
+
+  return mapped;
+}
+
 export function mapTouchItem(
   item: Record<string, unknown>,
   typeLabelMap: Map<string, string>,
@@ -118,17 +251,32 @@ export function mapTouchItem(
       ?? item[TOUCH_TYPE_FIELD],
   );
   const typeLabel = typeLabelMap.get(typeId) ?? typeId;
+  const communicationDate = firstScalar(
+    item[TOUCH_DATE_FIELD]
+      ?? item[TOUCH_DATE_FIELD_UPPER]
+      ?? item[TOUCH_DATE_FIELD.toLowerCase()],
+  );
   const { month, year, createdTime } = parseDateParts(
-    item.createdTime ?? item.CREATED_TIME ?? item.created_time,
+    communicationDate
+      || item.createdTime
+      || item.CREATED_TIME
+      || item.created_time,
   );
 
   return {
     id,
-    title: String(item.title ?? item.TITLE ?? `Касание #${id}`),
+    title: String(
+      firstScalar(item[TOUCH_COMMENT_FIELD] ?? item[TOUCH_COMMENT_FIELD_UPPER])
+        || item.title
+        || item.TITLE
+        || `Касание #${id}`,
+    ),
     typeId,
     typeLabel,
     kind: resolveTouchKind(typeLabel),
-    createdTime,
+    createdTime: communicationDate
+      ? (communicationDate.includes('T') ? communicationDate : `${communicationDate}T12:00:00`)
+      : createdTime,
     month,
     year,
     contactId: firstScalar(item.contactId ?? item.CONTACT_ID),
@@ -153,7 +301,16 @@ export async function loadTouchesByContactIds(
 
   const items = await fetchAllCrmItems(
     TOUCHES_ENTITY_TYPE_ID,
-    ['id', 'title', 'contactId', TOUCH_TYPE_FIELD_CAMEL, TOUCH_TYPE_FIELD, 'createdTime'],
+    [
+      'id',
+      'title',
+      'contactId',
+      TOUCH_TYPE_FIELD_CAMEL,
+      TOUCH_TYPE_FIELD,
+      TOUCH_COMMENT_FIELD,
+      TOUCH_DATE_FIELD,
+      'createdTime',
+    ],
     filter,
   );
 

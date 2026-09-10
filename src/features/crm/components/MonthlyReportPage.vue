@@ -261,6 +261,7 @@
             hover
             class="report-data-table report-data-table--paginated activity-report-table sticky-report-table monthly-report-table"
             :items-per-page="25"
+            :row-props="getRowProps"
           >
             <template #item.partner="{ item }">
               <div class="event-cell">
@@ -281,6 +282,32 @@
                   Все встречи / отчёты
                 </button>
               </div>
+            </template>
+
+            <template #item.assigned="{ item }">
+              <div v-if="getAssignedDisplay(item)" class="responsible-cell">
+                <v-avatar size="28" color="primary" variant="tonal">
+                  <img
+                    v-if="getAssignedPhoto(item)"
+                    :src="getAssignedPhoto(item)"
+                    :alt="getAssignedDisplay(item)?.shortName"
+                    class="avatar-image"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                    @error="markAvatarFailed(getAssignedPhoto(item))"
+                  >
+                  <span v-else class="avatar-initials">
+                    {{ getUserInitials(getAssignedDisplay(item)?.shortName || '') }}
+                  </span>
+                </v-avatar>
+                <span
+                  class="responsible-name"
+                  :title="getAssignedDisplay(item)?.name"
+                >
+                  {{ getAssignedDisplay(item)?.shortName }}
+                </span>
+              </div>
+              <span v-else class="monthly-table__text monthly-table__text--empty">—</span>
             </template>
 
             <template #item.nosologies="{ item }">
@@ -314,33 +341,18 @@
             </template>
 
             <template #item.interest="{ item }">
-              <div
-                v-if="editingCell?.rowId === item.id && editingCell.field === 'interest'"
-                class="monthly-table__edit"
-              >
-                <v-textarea
-                  v-model="item.interest"
-                  density="compact"
-                  variant="outlined"
-                  hide-details
-                  rows="2"
-                  auto-grow
-                  autofocus
-                  placeholder="Чем интересен"
-                  class="monthly-table__input"
-                  @blur="onInterestBlur(item)"
-                  @keydown.enter.exact.prevent="onInterestBlur(item)"
-                />
-              </div>
-              <button
-                v-else
-                type="button"
-                class="monthly-table__field monthly-table__field--left"
-                :class="{ 'monthly-table__field--empty': !item.interest }"
-                @click="startEditing(item.id, 'interest')"
-              >
-                {{ item.interest }}
-              </button>
+              <v-textarea
+                v-model="item.interest"
+                density="compact"
+                variant="outlined"
+                hide-details
+                rows="2"
+                auto-grow
+                placeholder="Чем интересен"
+                class="monthly-table__input"
+                @click.stop
+                @blur="onInterestBlur(item)"
+              />
             </template>
 
             <template #item.agreementLink="{ item }">
@@ -480,11 +492,21 @@
       <MonthlyTouchesDialog
         v-model="touchesDialogOpen"
         :partner-name="touchesDialogPartner"
+        :contact-id="touchesDialogContactId"
         :touches="touchesDialogItems"
         :kind="touchesDialogKind"
         :months="touchesPeriod.months"
         :years="touchesPeriod.years"
         @open-touch="openTouchItem"
+        @create-touch="createTouchFromDialog"
+      />
+
+      <MonthlyTouchCreateDialog
+        v-model="touchCreateOpen"
+        :contact-id="touchesDialogContactId"
+        :partner-name="touchesDialogPartner"
+        :default-kind="touchesDialogKind"
+        @created="onTouchCreated"
       />
 
       <MonthlyTasksDialog
@@ -521,13 +543,20 @@ import {
   buildMonthlyReportSpaDetailsPath,
   buildMonthlyReportSpaListPath,
   createMonthlyReportSpaItem,
+  loadContactIdsWithReportForPeriod,
   resolveReportPeriod,
 } from '../functions/monthlyReportSubmit';
 import {
   buildTouchDetailsPath,
   countTouchesByKind,
+  loadTouchesByContactIds,
   resolveTouchesPeriod,
 } from '../functions/monthlyTouches';
+import {
+  getUserInitials,
+  loadUserDisplaysByIds,
+  type UserDisplay,
+} from '../functions/userDisplay';
 import {
   updateContactCurrentStatus,
   updateContactInterest,
@@ -539,6 +568,7 @@ import {
   type MonthlyTaskItem,
 } from '../functions/monthlyTasks';
 import MonthlyTouchesDialog from './MonthlyTouchesDialog.vue';
+import MonthlyTouchCreateDialog from './MonthlyTouchCreateDialog.vue';
 import MonthlyTasksDialog from './MonthlyTasksDialog.vue';
 import MonthlyFieldEditDialog from './MonthlyFieldEditDialog.vue';
 import {
@@ -590,14 +620,19 @@ const selectedCurrentStatuses = ref<string[]>([]);
 
 const touchesDialogOpen = ref(false);
 const touchesDialogPartner = ref('');
+const touchesDialogContactId = ref('');
 const touchesDialogItems = ref<MonthlyTouchItem[]>([]);
 const touchesDialogKind = ref<TouchKind | null>(null);
+const touchCreateOpen = ref(false);
 const tasksDialogOpen = ref(false);
 const tasksDialogPartner = ref('');
 const tasksDialogItems = ref<MonthlyTaskItem[]>([]);
 const sendingRowId = ref<string | null>(null);
 const submitError = ref('');
 const attentionFilter = ref<'all' | 'no-touches' | 'no-next-step'>('all');
+const contactIdsWithReport = ref<Set<string>>(new Set());
+const userDisplaysById = ref<Map<string, UserDisplay>>(new Map());
+const failedAvatars = ref<Set<string>>(new Set());
 
 const insightLinks = [
   {
@@ -617,7 +652,6 @@ const insightLinks = [
   },
 ] as const;
 
-const editingCell = ref<{ rowId: string; field: 'interest' } | null>(null);
 const savingCell = ref(false);
 
 type FieldEditorKind = 'nosologies';
@@ -633,6 +667,7 @@ const yearOptions = monthlyYearOptions;
 
 const headers = [
   { title: 'Партнер', key: 'partner', align: 'start' as const, sortable: false },
+  { title: 'Ответственный', key: 'assigned', align: 'start' as const, sortable: false },
   { title: 'Нозологии', key: 'nosologies', align: 'center' as const, sortable: false },
   { title: 'Статус отношений', key: 'relationStatus', align: 'center' as const, sortable: false },
   { title: 'Чем интересен', key: 'interest', align: 'start' as const, sortable: false },
@@ -679,6 +714,10 @@ const baseFilteredRows = computed(() => filterMonthlyReportRows(rows.value, list
 
 const touchesPeriod = computed(() =>
   resolveTouchesPeriod(selectedMonths.value, selectedYears.value),
+);
+
+const reportPeriod = computed(() =>
+  resolveReportPeriod(selectedMonths.value, selectedYears.value),
 );
 
 const stats = computed(() => {
@@ -742,6 +781,70 @@ const tableTitle = computed(() => {
   return 'Партнеры';
 });
 
+function getAssignedDisplay(row: MonthlyReportRow): UserDisplay | null {
+  if (!row.assignedId) {
+    return null;
+  }
+  const fromMap = userDisplaysById.value.get(String(row.assignedId));
+  if (fromMap) {
+    return fromMap;
+  }
+  const option = props.assignedOptions.find((item) => String(item.id) === String(row.assignedId));
+  if (!option) {
+    return null;
+  }
+  return {
+    id: String(option.id),
+    name: option.title,
+    shortName: option.title,
+    photo: '',
+  };
+}
+
+function getAssignedPhoto(row: MonthlyReportRow): string {
+  const photo = getAssignedDisplay(row)?.photo ?? '';
+  if (!photo || failedAvatars.value.has(photo)) {
+    return '';
+  }
+  return photo;
+}
+
+function markAvatarFailed(url: string) {
+  if (!url) {
+    return;
+  }
+  failedAvatars.value = new Set([...failedAvatars.value, url]);
+}
+
+function getRowProps(data: { item: MonthlyReportRow | { raw?: MonthlyReportRow } }) {
+  const row = ('raw' in data.item && data.item.raw) ? data.item.raw : data.item as MonthlyReportRow;
+  return {
+    class: contactIdsWithReport.value.has(String(row.id))
+      ? 'monthly-report-table__row--reported'
+      : undefined,
+  };
+}
+
+async function refreshReportHighlights() {
+  try {
+    contactIdsWithReport.value = await loadContactIdsWithReportForPeriod(reportPeriod.value);
+  } catch (error) {
+    console.warn('Не удалось загрузить отчёты за период:', error);
+    contactIdsWithReport.value = new Set();
+  }
+}
+
+async function refreshUserDisplays(sourceRows: MonthlyReportRow[]) {
+  try {
+    userDisplaysById.value = await loadUserDisplaysByIds(
+      sourceRows.map((row) => row.assignedId),
+    );
+  } catch (error) {
+    console.warn('Не удалось загрузить ответственных:', error);
+    userDisplaysById.value = new Map();
+  }
+}
+
 function toggleChip(list: Ref<string[]>, id: string) {
   const index = list.value.indexOf(id);
   if (index >= 0) {
@@ -786,10 +889,6 @@ function toggleAttentionFilter(filter: 'no-touches' | 'no-next-step') {
 
 function onInsightClick(link: { path: string }) {
   openLink(link.path);
-}
-
-function startEditing(rowId: string, field: 'interest') {
-  editingCell.value = { rowId, field };
 }
 
 function openFieldEditor(row: MonthlyReportRow, kind: FieldEditorKind) {
@@ -890,7 +989,6 @@ async function onInterestBlur(row: MonthlyReportRow) {
   savingCell.value = true;
   try {
     await updateContactInterest(row.id, nextValue);
-    editingCell.value = null;
   } catch (error) {
     console.error('Не удалось сохранить поле «Чем интересен»:', error);
     window.alert('Не удалось сохранить поле «Чем интересен»');
@@ -939,6 +1037,7 @@ function touchCount(row: MonthlyReportRow, kind: TouchKind): number {
 
 function openTouchesDialog(row: MonthlyReportRow, kind: TouchKind) {
   touchesDialogPartner.value = [row.partnerName, row.organization].filter(Boolean).join(', ');
+  touchesDialogContactId.value = row.id;
   touchesDialogItems.value = row.touches ?? [];
   touchesDialogKind.value = kind;
   touchesDialogOpen.value = true;
@@ -946,6 +1045,32 @@ function openTouchesDialog(row: MonthlyReportRow, kind: TouchKind) {
 
 function openTouchItem(touch: MonthlyTouchItem) {
   openBitrixPath(buildTouchDetailsPath(touch.id));
+}
+
+function createTouchFromDialog() {
+  if (!touchesDialogContactId.value) {
+    return;
+  }
+  touchCreateOpen.value = true;
+}
+
+async function onTouchCreated() {
+  const contactId = touchesDialogContactId.value;
+  if (!contactId) {
+    return;
+  }
+
+  try {
+    const byContact = await loadTouchesByContactIds([contactId]);
+    const nextTouches = byContact.get(contactId) ?? [];
+    touchesDialogItems.value = nextTouches;
+    const row = rows.value.find((item) => item.id === contactId);
+    if (row) {
+      row.touches = nextTouches;
+    }
+  } catch (error) {
+    console.error('Не удалось обновить список касаний:', error);
+  }
 }
 
 function openTasksDialog(row: MonthlyReportRow) {
@@ -970,7 +1095,9 @@ async function submitRow(row: MonthlyReportRow) {
     // По умолчанию период = текущий месяц; касания в SPA только за этот период.
     const period = resolveReportPeriod(selectedMonths.value, selectedYears.value);
     const created = await createMonthlyReportSpaItem(row, period);
-    openBitrixPath(buildMonthlyReportSpaDetailsPath(created.id));
+    openBitrixPath(buildMonthlyReportSpaDetailsPath(created.id), () => {
+      void refreshReportHighlights();
+    });
   } catch (error) {
     console.error('Не удалось создать отчётность:', error);
     submitError.value = error instanceof Error ? error.message : 'Не удалось создать отчётность';
@@ -984,6 +1111,13 @@ async function refreshTableScroll() {
   await nextTick();
   refreshStickyReportTableHeaders();
 }
+
+watch(reportPeriod, () => {
+  if (isLoading.value) {
+    return;
+  }
+  void refreshReportHighlights();
+}, { deep: true });
 
 watch(filteredRows, () => {
   void refreshTableScroll();
@@ -1012,6 +1146,10 @@ async function loadData() {
     relationStatusOptions.value = data.relationStatusOptions;
     currentStatusChipDefs.value = data.currentStatusChips;
     nosologyOptions.value = data.nosologyOptions;
+    await Promise.all([
+      refreshUserDisplays(data.rows),
+      refreshReportHighlights(),
+    ]);
     loadingProgress.value = 100;
     loadingMessage.value = 'Готово';
     window.setTimeout(() => {

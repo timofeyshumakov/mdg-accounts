@@ -1,4 +1,4 @@
-import { callBxMethod } from './bitrixApi';
+import { callBxMethod, fetchAllCrmItems } from './bitrixApi';
 import { appendCrmContactListFilter } from './bitrixListFilter';
 import {
   filterTouches,
@@ -14,6 +14,7 @@ export const MONTHLY_REPORT_SPA_FIELDS = {
   comment: 'ufCrm140_1787237987958',
   nextStep: 'ufCrm140_1787238005509',
   reportDate: 'ufCrm140_1787238020861',
+  reportDateUpper: 'UF_CRM_140_1787238020861',
   currentStatus: 'ufCrm140_1787238112663',
 } as const;
 
@@ -36,7 +37,6 @@ export function resolveReportPeriod(
 ): MonthlyReportPeriod {
   const current = getCurrentReportPeriod(now);
 
-  // Явно выбран один месяц и один год — берём их.
   if (selectedMonths.length === 1 && selectedYears.length === 1) {
     return {
       month: selectedMonths[0],
@@ -44,7 +44,6 @@ export function resolveReportPeriod(
     };
   }
 
-  // Выбран только месяц — год текущий.
   if (selectedMonths.length === 1 && selectedYears.length === 0) {
     return {
       month: selectedMonths[0],
@@ -52,7 +51,6 @@ export function resolveReportPeriod(
     };
   }
 
-  // По умолчанию (пусто / несколько значений) — только текущий месяц.
   return current;
 }
 
@@ -119,6 +117,93 @@ export function buildMonthlyReportSpaListPath(
   const params = new URLSearchParams();
   appendCrmContactListFilter(params, 'CONTACT_ID', contactId, contactLabel);
   return `/crm/type/${MONTHLY_REPORT_SPA_ENTITY_TYPE_ID}/list/category/0/?${params.toString()}`;
+}
+
+function extractContactIdFromSpaItem(item: Record<string, unknown>): string {
+  const raw = item.contactId ?? item.CONTACT_ID ?? item.contact_id;
+  if (Array.isArray(raw)) {
+    return String(raw[0] ?? '').trim();
+  }
+  if (raw && typeof raw === 'object') {
+    const record = raw as Record<string, unknown>;
+    return String(record.id ?? record.ID ?? '').trim();
+  }
+  return String(raw ?? '').trim();
+}
+
+function extractReportDateFromSpaItem(item: Record<string, unknown>): string {
+  const raw = item[MONTHLY_REPORT_SPA_FIELDS.reportDate]
+    ?? item[MONTHLY_REPORT_SPA_FIELDS.reportDateUpper]
+    ?? item.reportDate
+    ?? '';
+  return String(raw).slice(0, 10);
+}
+
+export function spaItemMatchesReportPeriod(
+  item: Record<string, unknown>,
+  period: MonthlyReportPeriod,
+): boolean {
+  const reportDate = extractReportDateFromSpaItem(item);
+  return reportDate === formatReportPeriodDate(period)
+    || reportDate.startsWith(`${period.year}-${String(period.month).padStart(2, '0')}`);
+}
+
+/** Контакты, у которых есть SPA-отчёт за период (по умолчанию текущий месяц). */
+export async function loadContactIdsWithReportForPeriod(
+  period: MonthlyReportPeriod,
+): Promise<Set<string>> {
+  const reportDate = formatReportPeriodDate(period);
+  const select = [
+    'id',
+    'contactId',
+    'CONTACT_ID',
+    MONTHLY_REPORT_SPA_FIELDS.reportDate,
+    MONTHLY_REPORT_SPA_FIELDS.reportDateUpper,
+  ];
+
+  let items: Record<string, unknown>[] = [];
+  try {
+    items = await fetchAllCrmItems(
+      MONTHLY_REPORT_SPA_ENTITY_TYPE_ID,
+      select,
+      { [MONTHLY_REPORT_SPA_FIELDS.reportDate]: reportDate },
+    );
+  } catch {
+    items = [];
+  }
+
+  if (!items.length) {
+    try {
+      items = await fetchAllCrmItems(
+        MONTHLY_REPORT_SPA_ENTITY_TYPE_ID,
+        select,
+        { [MONTHLY_REPORT_SPA_FIELDS.reportDateUpper]: reportDate },
+      );
+    } catch {
+      items = [];
+    }
+  }
+
+  if (!items.length) {
+    try {
+      items = await fetchAllCrmItems(MONTHLY_REPORT_SPA_ENTITY_TYPE_ID, select, {});
+    } catch {
+      items = [];
+    }
+  }
+
+  const contactIds = new Set<string>();
+  items.forEach((item) => {
+    if (!spaItemMatchesReportPeriod(item, period)) {
+      return;
+    }
+    const contactId = extractContactIdFromSpaItem(item);
+    if (contactId) {
+      contactIds.add(contactId);
+    }
+  });
+
+  return contactIds;
 }
 
 export async function createMonthlyReportSpaItem(

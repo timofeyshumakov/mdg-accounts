@@ -7,9 +7,23 @@
   >
     <v-card class="touches-dialog">
       <v-card-title class="touches-dialog__title">
-        Касания
-        <span v-if="partnerName" class="touches-dialog__partner">{{ partnerName }}</span>
-        <span class="touches-dialog__count">{{ filteredTouches.length }}</span>
+        <div class="touches-dialog__toolbar">
+          <v-btn
+            color="primary"
+            variant="flat"
+            size="small"
+            class="touches-dialog__create"
+            :disabled="!contactId"
+            @click="emit('create-touch')"
+          >
+            Создать касание
+          </v-btn>
+        </div>
+        <div class="touches-dialog__heading">
+          <span>Касания</span>
+          <span v-if="partnerName" class="touches-dialog__partner">{{ partnerName }}</span>
+          <span class="touches-dialog__count">{{ filteredTouches.length }}</span>
+        </div>
       </v-card-title>
 
       <v-card-text class="touches-dialog__body">
@@ -61,6 +75,7 @@ import { filterTouches } from '../functions/monthlyTouches';
 const props = defineProps<{
   modelValue: boolean;
   partnerName?: string;
+  contactId?: string;
   touches: MonthlyTouchItem[];
   kind?: TouchKind | null;
   months?: number[];
@@ -70,6 +85,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
   'open-touch': [touch: MonthlyTouchItem];
+  'create-touch': [];
 }>();
 
 const search = ref('');
