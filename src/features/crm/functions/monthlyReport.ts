@@ -166,6 +166,7 @@ function chipsFromLabelMap(
   rows: MonthlyReportRow[],
   field: 'relationStatusId' | 'currentStatusId',
   excludeIds: Set<string> = new Set(),
+  customOrder?: string[],
 ): MonthlyChipOption[] {
   const seen = new Set<string>();
   const chips: MonthlyChipOption[] = [];
@@ -181,6 +182,17 @@ function chipsFromLabelMap(
       count: rows.filter((row) => row[field] === id).length,
     });
   });
+
+  if (customOrder) {
+    function customSortKey(chip: MonthlyChipOption): number {
+      const normalized = chip.label.trim().toLowerCase();
+      const index = customOrder.findIndex(
+        (label) => normalized === label.toLowerCase(),
+      );
+      return index >= 0 ? index : customOrder.length;
+    }
+    return chips.sort((left, right) => customSortKey(left) - customSortKey(right));
+  }
 
   return chips.sort((left, right) => left.label.localeCompare(right.label, 'ru'));
 }
@@ -533,11 +545,29 @@ export async function loadMonthlyReportData(
     .sort((left, right) => left.title.localeCompare(right.title, 'ru'));
 
   // «Новый» / «Действующий» дублируются в «Тип партнера» и «Статус отношений» — по ТЗ
+  const RELATION_STATUS_ORDER = [
+    'актуальный',
+    'потенциальный',
+    'постоянный',
+    'хороший',
+    'нейтральный',
+    'требует восстановления',
+    'новый',
+  ];
+
+  function relationStatusSortKey(option: { title: string }): number {
+    const normalized = option.title.trim().toLowerCase();
+    const index = RELATION_STATUS_ORDER.findIndex(
+      (label) => normalized === label.toLowerCase(),
+    );
+    return index >= 0 ? index : RELATION_STATUS_ORDER.length;
+  }
+
   const relationStatusOptions = [...relationLabelMap.entries()]
     .filter(([id]) => /^\d+$/.test(id))
     .map(([id, title]) => ({ id, title }))
     .filter((option, index, list) => list.findIndex((item) => item.id === option.id) === index)
-    .sort((left, right) => left.title.localeCompare(right.title, 'ru'));
+    .sort((left, right) => relationStatusSortKey(left) - relationStatusSortKey(right));
 
   return {
     rows: rowsWithTouches,
@@ -557,6 +587,8 @@ export async function loadMonthlyReportData(
       relationLabelMap,
       rowsWithTouches,
       'relationStatusId',
+      new Set(),
+      RELATION_STATUS_ORDER,
     ),
     relationStatusOptions,
     currentStatusChips: chipsFromLabelMap(currentLabelMap, rowsWithTouches, 'currentStatusId'),

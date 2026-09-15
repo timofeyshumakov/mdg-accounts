@@ -114,41 +114,39 @@
         </div>
 
         <div class="monthly-filters-row">
-          <div class="monthly-filter-groups">
-            <article class="monthly-filter-card monthly-filter-card--grow">
-              <h4 class="monthly-filter-card__title">Статус отношений</h4>
-              <div class="monthly-filter-card__chips">
-                <button
-                  v-for="chip in relationStatusChips"
-                  :key="chip.id"
-                  type="button"
-                  class="monthly-chip"
-                  :class="{ 'monthly-chip--active': selectedRelationStatuses.includes(chip.id) }"
-                  @click="toggleRelationStatus(chip.id)"
-                >
-                  <span class="monthly-chip__label">{{ chip.label }}</span>
-                  <span class="monthly-chip__count">{{ chip.count }}</span>
-                </button>
-              </div>
-            </article>
+          <article class="monthly-filter-card">
+            <h4 class="monthly-filter-card__title">Статус отношений</h4>
+            <div class="monthly-filter-card__chips">
+              <button
+                v-for="chip in relationStatusChips"
+                :key="chip.id"
+                type="button"
+                class="monthly-chip"
+                :class="{ 'monthly-chip--active': selectedRelationStatuses.includes(chip.id) }"
+                @click="toggleRelationStatus(chip.id)"
+              >
+                <span class="monthly-chip__label">{{ chip.label }}</span>
+                <span class="monthly-chip__count">{{ chip.count }}</span>
+              </button>
+            </div>
+          </article>
 
-            <article class="monthly-filter-card">
-              <h4 class="monthly-filter-card__title">Текущий статус</h4>
-              <div class="monthly-filter-card__chips">
-                <button
-                  v-for="chip in currentStatusChips"
-                  :key="chip.id"
-                  type="button"
-                  class="monthly-chip"
-                  :class="{ 'monthly-chip--active': selectedCurrentStatuses.includes(chip.id) }"
-                  @click="toggleCurrentStatus(chip.id)"
-                >
-                  <span class="monthly-chip__label">{{ chip.label }}</span>
-                  <span class="monthly-chip__count">{{ chip.count }}</span>
-                </button>
-              </div>
-            </article>
-          </div>
+          <article class="monthly-filter-card">
+            <h4 class="monthly-filter-card__title">Текущий статус</h4>
+            <div class="monthly-filter-card__chips">
+              <button
+                v-for="chip in currentStatusChips"
+                :key="chip.id"
+                type="button"
+                class="monthly-chip"
+                :class="{ 'monthly-chip--active': selectedCurrentStatuses.includes(chip.id) }"
+                @click="toggleCurrentStatus(chip.id)"
+              >
+                <span class="monthly-chip__label">{{ chip.label }}</span>
+                <span class="monthly-chip__count">{{ chip.count }}</span>
+              </button>
+            </div>
+          </article>
 
           <article class="monthly-insights panel">
             <h4 class="monthly-insights__title">Развитие и рыночные инсайты</h4>
@@ -186,6 +184,22 @@
 
         <button
           type="button"
+          class="monthly-stats__card monthly-stats__card--report"
+          :class="{ 'monthly-stats__card--active': attentionFilter === 'no-report' }"
+          @click="toggleAttentionFilter('no-report')"
+        >
+          <span class="monthly-stats__icon monthly-stats__icon--report">
+            <v-icon icon="$fileDocumentOutline" size="22" />
+          </span>
+          <div class="monthly-stats__body">
+            <span class="monthly-stats__label">Нет отчета</span>
+            <strong class="monthly-stats__value monthly-stats__value--report">{{ stats.noReport }}</strong>
+            <span class="monthly-stats__badge monthly-stats__badge--report">Требует внимания</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
           class="monthly-stats__card monthly-stats__card--warning"
           :class="{ 'monthly-stats__card--active': attentionFilter === 'no-touches' }"
           @click="toggleAttentionFilter('no-touches')"
@@ -216,21 +230,6 @@
           </div>
         </button>
 
-        <button
-          type="button"
-          class="monthly-stats__card monthly-stats__card--report"
-          :class="{ 'monthly-stats__card--active': attentionFilter === 'no-report' }"
-          @click="toggleAttentionFilter('no-report')"
-        >
-          <span class="monthly-stats__icon monthly-stats__icon--report">
-            <v-icon icon="$fileDocumentOutline" size="22" />
-          </span>
-          <div class="monthly-stats__body">
-            <span class="monthly-stats__label">Нет отчета</span>
-            <strong class="monthly-stats__value monthly-stats__value--report">{{ stats.noReport }}</strong>
-            <span class="monthly-stats__badge monthly-stats__badge--report">Требует внимания</span>
-          </div>
-        </button>
       </section>
 
       <div class="monthly-report__search panel">

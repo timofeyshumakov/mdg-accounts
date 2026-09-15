@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 
 const DEFAULT_ZOOM = 100;
-const MIN_ZOOM = 80;
+const MIN_ZOOM = 70;
 const MAX_ZOOM = 300;
 const STEP = 10;
 
