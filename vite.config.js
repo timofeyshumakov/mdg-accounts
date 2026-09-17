@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
     copy({
       targets: [
         { src: 'public/fonts/*', dest: 'dist/assets/fonts' },
+        { src: 'public/assets/icons/*', dest: 'dist/assets/icons' },
       ],
       verbose: true,
       hook: 'writeBundle',
