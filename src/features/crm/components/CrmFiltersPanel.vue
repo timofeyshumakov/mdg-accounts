@@ -49,9 +49,11 @@
           multiple
           chips
           clearable
-          prepend-inner-icon="$handshakeOutline"
           @update:model-value="patch({ partnerIds: asStringArray($event) })"
         >
+          <template #prepend-inner>
+            <img src="../../assets/icons/filters/partners.png" alt="Партнер" class="crm-filters__icon-img" />
+          </template>
           <template #prepend-item>
             <v-list-item>
               <v-checkbox

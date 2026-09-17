@@ -16,8 +16,10 @@
           :alt="metric.label"
         >
       </span>
-      <span class="crm-summary__label">{{ metric.label }}:</span>
-      <strong class="crm-summary__value">{{ metric.value }}</strong>
+      <div class="crm-summary__content">
+        <span class="crm-summary__label">{{ metric.label }}</span>
+        <strong class="crm-summary__value">{{ metric.value }}</strong>
+      </div>
     </article>
   </section>
 </template>
