@@ -26,6 +26,10 @@
 
 <script setup lang="ts">
 import type { SummaryMetric } from '../mock/dashboardData';
+import partnersIcon from '../assets/icons/partners.png';
+import nosologiesIcon from '../assets/icons/nosologies.png';
+import ourEventsIcon from '../assets/icons/our-events.png';
+import competitorEventsIcon from '../assets/icons/competitor-events.png';
 
 defineProps<{
   metrics: SummaryMetric[];
@@ -34,9 +38,9 @@ defineProps<{
 const iconColors = ['#f3f4f8', '#f6f7e7', '#eff7ec', '#fbf0ea'] as const;
 
 const iconById: Record<string, string> = {
-  partners: '/assets/icons/partners.png',
-  nosologies: '/assets/icons/nosologies.png',
-  'our-events': '/assets/icons/our-events.png',
-  'competitor-events': '/assets/icons/competitor-events.png',
+  partners: partnersIcon,
+  nosologies: nosologiesIcon,
+  'our-events': ourEventsIcon,
+  'competitor-events': competitorEventsIcon,
 };
 </script>

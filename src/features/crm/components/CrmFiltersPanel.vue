@@ -51,9 +51,7 @@
           clearable
           @update:model-value="patch({ partnerIds: asStringArray($event) })"
         >
-          <template #prepend-inner>
-            <img src="/assets/icons/partners.png" alt="Партнер" class="crm-filters__icon-img" />
-          </template>
+
           <template #prepend-item>
             <v-list-item>
               <v-checkbox
