@@ -49,14 +49,12 @@
           multiple
           chips
           clearable
+          prepend-inner-icon="$handshake"
           @update:model-value="patch({ partnerIds: asStringArray($event) })"
         >
-          <template #prepend>
-            <v-icon>
-              <img :src="partnersFilterIcon" alt="Партнер" class="filter-icon" />
-            </v-icon>
+          <template #prepend-inner>
+            <img :src="partnersFilterIcon" alt="Партнер" class="filter-icon" />
           </template>
-        >
 
           <template #prepend-item>
             <v-list-item>
