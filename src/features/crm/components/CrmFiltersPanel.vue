@@ -51,6 +51,12 @@
           clearable
           @update:model-value="patch({ partnerIds: asStringArray($event) })"
         >
+          <template #prepend>
+            <v-icon>
+              <img :src="partnersFilterIcon" alt="Партнер" class="filter-icon" />
+            </v-icon>
+          </template>
+        >
 
           <template #prepend-item>
             <v-list-item>
@@ -136,6 +142,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import partnersFilterIcon from '../assets/icons/partners-filter.png';
 import {
   MONTH_OPTIONS,
   type CrmDashboardFilters,

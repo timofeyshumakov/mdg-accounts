@@ -1,18 +1,19 @@
-import { defineConfig, loadEnv } from 'vite';
-import copy from 'rollup-plugin-copy';
-import vue from '@vitejs/plugin-vue';
-import basicSsl from '@vitejs/plugin-basic-ssl';
-import { existsSync, readFileSync } from 'node:fs';
+import { defineConfig } from 'vitest/config'
+import copy from 'rollup-plugin-copy'
+import vue from '@vitejs/plugin-vue'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  const useHttps = env.VITE_DEV_HTTPS !== 'false';
-  const certPath = env.VITE_DEV_HTTPS_CERT || './cert.pem';
-  const keyPath = env.VITE_DEV_HTTPS_KEY || './private.key';
-  const proxyTarget = env.VITE_DEV_PROXY_TARGET;
-  const hasCustomCerts = existsSync(certPath) && existsSync(keyPath);
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-  const plugins = [
+export default defineConfig({
+  base: '',
+  build: {
+    assetsDir: 'assets',
+    emptyOutDir: true,
+  },
+  plugins: [
     vue(),
     copy({
       targets: [
@@ -22,69 +23,30 @@ export default defineConfig(({ mode }) => {
       hook: 'writeBundle',
       apply: 'build',
     }),
-  ];
-
-  if (useHttps && !hasCustomCerts) {
-    plugins.push(basicSsl());
-  }
-
-  const httpsConfig = useHttps
-    ? hasCustomCerts
-      ? {
-          cert: readFileSync(certPath),
-          key: readFileSync(keyPath),
-        }
-      : true
-    : undefined;
-
-  return {
-    plugins,
-    test: {
-      environment: 'node',
-      env: {
-        BITRIX_WEBHOOK_URL: env.BITRIX_WEBHOOK_URL ?? '',
-        BITRIX_TEST_CONTACT_ID: env.BITRIX_TEST_CONTACT_ID ?? '32610',
-      },
-      testTimeout: 60_000,
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
     },
-    server: {
-      host: env.VITE_DEV_HOST || 'localhost',
-      port: Number(env.VITE_DEV_PORT || 5173),
-      ...(httpsConfig ? { https: httpsConfig } : {}),
-      ...(proxyTarget
-        ? {
-            proxy: {
-              '/requests.json': {
-                target: proxyTarget,
-                changeOrigin: true,
-                secure: false,
-              },
-            },
-          }
-        : {}),
+  },
+  test: {
+    environment: 'node',
+    include: ['src/tests/**/*.test.ts'],
+    exclude: ['src/tests/sum.test.ts', 'src/tests/sum.test.js'],
+  },
+  server: {
+    https: {
+      key: fs.readFileSync('./private.key'),
+      cert: fs.readFileSync('./cert.pem'),
     },
-    build: {
-      // PNG карточек >4kb иначе уходят в /assets/*.png внутри JS — build.bat это не правит
-      assetsInlineLimit: 10_240,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (!id.includes('node_modules')) return undefined;
-
-            if (id.includes('node_modules/vuetify')) {
-              return 'vendor-vuetify';
-            }
-
-            return 'vendor';
-          },
-          chunkFileNames: (chunkInfo) => {
-            if (chunkInfo.name?.startsWith('vendor')) {
-              return 'assets/[name]-[hash].js';
-            }
-            return 'assets/[name]-[hash].js';
-          },
-        },
+    proxy: {
+      '/requests.json': {
+        target: 'https://dev2.smartbusinessclub.ru/timofei/b24_iw2sts_bitrix24_ru/requests.json',
+        changeOrigin: true,
+        secure: false,
       },
     },
-  };
-});
+    host: '127.0.0.1',
+    port: 5173,
+  },
+})
