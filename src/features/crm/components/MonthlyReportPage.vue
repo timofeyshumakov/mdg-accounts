@@ -529,7 +529,7 @@
             <template #item.actions="{ item }">
               <div class="event-actions">
                 <v-btn
-                  color="success"
+                  color="white"
                   size="small"
                   variant="flat"
                   class="monthly-table__send"
@@ -799,7 +799,7 @@
             <template #item.actions="{ item }">
               <div class="event-actions">
                 <v-btn
-                  color="success"
+                  color="white"
                   size="small"
                   variant="flat"
                   class="monthly-table__send"
@@ -1705,5 +1705,28 @@ onUnmounted(() => {
 
 .monthly-touch-cell .v-icon {
   color: #1976d2;
+}
+
+.monthly-table__send {
+  background-color: #ffffff !important;
+  border: 1px solid #e0e0e0 !important;
+  color: #1a1a1a !important;
+  font-weight: 500;
+}
+
+.monthly-table__send:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.monthly-table__send .v-icon {
+  color: #1a1a1a !important;
+}
+
+.report-header__logo {
+  display: block;
+  width: auto;
+  height: 3.25rem;
+  max-width: min(100%, 20rem);
+  object-fit: contain;
 }
 </style>
