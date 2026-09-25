@@ -11,6 +11,9 @@ import { NAV_EXTERNAL_PATHS } from './crmNavigation';
 
 export const TASKS_GROUP_ID = 1314;
 
+/** Статус задачи, который нужно исключать из отчёта. */
+export const TASKS_EXCLUDED_STAGE_ID = '16688';
+
 export const TASKS_GROUP_LIST_PATH = NAV_EXTERNAL_PATHS.tasks;
 
 const TASKS_PAGE_SIZE = 50;
@@ -250,6 +253,7 @@ async function fetchTasksListByContactsBatch(
     for (const contactId of contactIds) {
       const filter: Record<string, unknown> = {
         UF_CRM_TASK: buildContactCrmTaskValue(contactId),
+        '!STAGE_ID': TASKS_EXCLUDED_STAGE_ID,
       };
       if (withGroupId) {
         filter.GROUP_ID = TASKS_GROUP_ID;
@@ -266,6 +270,7 @@ async function fetchTasksListByContactsBatch(
     chunk.forEach((contactId, cmdIndex) => {
       const filter: Record<string, unknown> = {
         UF_CRM_TASK: buildContactCrmTaskValue(contactId),
+        '!STAGE_ID': TASKS_EXCLUDED_STAGE_ID,
       };
       if (withGroupId) {
         filter.GROUP_ID = TASKS_GROUP_ID;
@@ -298,6 +303,7 @@ async function fetchTasksListByContactsBatch(
     for (const contactId of needMorePages) {
       const filter: Record<string, unknown> = {
         UF_CRM_TASK: buildContactCrmTaskValue(contactId),
+        '!STAGE_ID': TASKS_EXCLUDED_STAGE_ID,
       };
       if (withGroupId) {
         filter.GROUP_ID = TASKS_GROUP_ID;
@@ -421,7 +427,7 @@ export async function loadTasksByContactIds(
   try {
     let groupTasks: Record<string, unknown>[] = [];
     try {
-      groupTasks = await fetchAllTasks({ GROUP_ID: TASKS_GROUP_ID });
+      groupTasks = await fetchAllTasks({ GROUP_ID: TASKS_GROUP_ID, '!STAGE_ID': TASKS_EXCLUDED_STAGE_ID });
     } catch (groupError) {
       console.warn('Не удалось загрузить задачи группы, пробуем без GROUP_ID:', groupError);
     }

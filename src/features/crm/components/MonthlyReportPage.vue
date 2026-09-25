@@ -115,10 +115,11 @@
 
         <div class="monthly-filters-row">
           <article class="monthly-filter-card">
-            <h4 class="monthly-filter-card__title">Статус отношений</h4>
+            <h4 class="monthly-filter-card__title">Актуальные</h4>
             <div class="monthly-filter-card__chips">
+              <h5 class="monthly-filter-card__subtitle">Статус отношений</h5>
               <button
-                v-for="chip in relationStatusChips"
+                v-for="chip in actualRelationStatusChips"
                 :key="chip.id"
                 type="button"
                 class="monthly-chip"
@@ -129,13 +130,28 @@
                 <span class="monthly-chip__count">{{ chip.count }}</span>
               </button>
             </div>
+            <div class="monthly-filter-card__chips">
+              <h5 class="monthly-filter-card__subtitle">Текущий статус</h5>
+              <button
+                v-for="chip in actualCurrentStatusChips"
+                :key="chip.id"
+                type="button"
+                class="monthly-chip"
+                :class="{ 'monthly-chip--active': selectedCurrentStatuses.includes(chip.id) }"
+                @click="toggleCurrentStatus(chip.id)"
+              >
+                <span class="monthly-chip__label">{{ chip.label }}</span>
+                <span class="monthly-chip__count">{{ chip.count }}</span>
+              </button>
+            </div>
           </article>
 
           <article class="monthly-filter-card">
-            <h4 class="monthly-filter-card__title">Текущий статус</h4>
+            <h4 class="monthly-filter-card__title">Новые</h4>
             <div class="monthly-filter-card__chips">
+              <h5 class="monthly-filter-card__subtitle">Текущий статус</h5>
               <button
-                v-for="chip in currentStatusChips"
+                v-for="chip in newCurrentStatusChips"
                 :key="chip.id"
                 type="button"
                 class="monthly-chip"
@@ -244,16 +260,33 @@
         />
       </div>
 
+      <div class="monthly-report__summary panel">
+        <div class="monthly-report__summary-content">
+          <div class="monthly-report__summary-text">
+            <h4 class="monthly-report__summary-title">Краткое резюме месяца</h4>
+            <p class="monthly-report__summary-description">Заполняется в 3–5 предложениях. Что изменилось за месяц и где есть движение?</p>
+          </div>
+          <button
+            type="button"
+            class="monthly-report__summary-btn"
+            @click="openMonthlySummary"
+          >
+            Открыть резюме
+            <v-icon icon="$chevronRight" size="18" />
+          </button>
+        </div>
+      </div>
+
       <section class="report-table-section">
         <v-card class="report-table-card report-table-card--sticky panel monthly-report-table-card">
           <v-card-title class="report-table-title">
-            {{ tableTitle }}
-            <span class="monthly-report__table-count">{{ filteredRows.length }}</span>
+            Актуальные партнеры
+            <span class="monthly-report__table-count">{{ actualFilteredRows.length }}</span>
           </v-card-title>
 
           <v-data-table
-            :headers="headers"
-            :items="filteredRows"
+            :headers="actualHeaders"
+            :items="actualFilteredRows"
             item-value="id"
             density="comfortable"
             hover
@@ -261,6 +294,18 @@
             :items-per-page="25"
             :row-props="getRowProps"
           >
+            <template #header.calls="{ column }">
+              <span class="table-header__icon">
+                <v-icon icon="$phone" size="16" />
+                {{ column.title }}
+              </span>
+            </template>
+            <template #header.meetings="{ column }">
+              <span class="table-header__icon">
+                <v-icon icon="$calendar" size="16" />
+                {{ column.title }}
+              </span>
+            </template>
             <template #item.partner="{ item }">
               <div class="event-cell">
                 <div class="event-cell__title-row">
@@ -269,7 +314,8 @@
                     class="monthly-table__partner-name event-link"
                     @click="openContact(item.id)"
                   >
-                    {{ item.partnerName }}<template v-if="item.organization">, {{ item.organization }}</template>
+                    {{ item.partnerName }}
+                    <!-- <template v-if="item.organization">, {{ item.organization }}</template> -->
                   </button>
                 </div>
                 <button
@@ -277,7 +323,7 @@
                   class="event-link event-link--secondary"
                   @click="openReports(item)"
                 >
-                  Все встречи / отчёты
+                  Все отчёты
                 </button>
               </div>
             </template>
@@ -354,33 +400,45 @@
             </template>
 
             <template #item.agreementLink="{ item }">
-              <button
-                type="button"
-                class="event-link"
-                @click="openLink(item.agreementLink)"
-              >
-                Открыть
-              </button>
+              <div v-if="item.agreementInfo" class="agreement-info">
+                <div class="agreement-info__item">
+                  <span class="agreement-info__label">Дата создания</span>
+                  <span class="agreement-info__value">{{ item.agreementInfo.created }}</span>
+                </div>
+                <div v-if="item.agreementInfo.source" class="agreement-info__item">
+                  <span class="agreement-info__label">Источник контакта</span>
+                  <span class="agreement-info__value">{{ item.agreementInfo.source }}</span>
+                </div>
+                <div v-if="item.agreementInfo.interest" class="agreement-info__item">
+                  <span class="agreement-info__label">Почему интересен</span>
+                  <span class="agreement-info__value">{{ item.agreementInfo.interest }}</span>
+                </div>
+                <div v-if="item.agreementInfo.currentStatus" class="agreement-info__item">
+                  <span class="agreement-info__label">Текущий статус</span>
+                  <span class="agreement-info__value">{{ item.agreementInfo.currentStatus }}</span>
+                </div>
+              </div>
+              <div v-else class="agreement-info__empty">
+                Нет договоренности
+              </div>
             </template>
 
             <template #item.ourEventsLink="{ item }">
-              <button
-                type="button"
-                class="event-link"
-                @click="openLink(item.ourEventsLink)"
-              >
-                Открыть
-              </button>
-            </template>
-
-            <template #item.competitorEventsLink="{ item }">
-              <button
-                type="button"
-                class="event-link"
-                @click="openLink(item.competitorEventsLink)"
-              >
-                Открыть
-              </button>
+              <div v-if="item.events && item.events.length" class="events-list">
+                <button
+                  v-for="event in item.events"
+                  :key="event.id"
+                  type="button"
+                  class="events-list__item"
+                  @click="openEventDetails(event.id)"
+                >
+                  <span class="events-list__bullet">•</span>
+                  <span class="events-list__title">{{ event.title }}</span>
+                </button>
+              </div>
+              <div v-else class="events-list__empty">
+                Нет мероприятий
+              </div>
             </template>
 
             <template #item.calls="{ item }">
@@ -464,14 +522,14 @@
                 class="monthly-touch-cell"
                 @click="openTasksDialog(item)"
               >
-                <strong>{{ item.tasks }}</strong>
+                <span class="task-count-badge">{{ item.tasks }}</span>
               </button>
             </template>
 
             <template #item.actions="{ item }">
               <div class="event-actions">
                 <v-btn
-                  color="primary"
+                  color="success"
                   size="small"
                   variant="flat"
                   class="monthly-table__send"
@@ -480,6 +538,279 @@
                   @click="submitRow(item)"
                 >
                   Отправить
+                  <template #append>
+                    <v-icon icon="$send" size="16" />
+                  </template>
+                </v-btn>
+              </div>
+            </template>
+          </v-data-table>
+        </v-card>
+
+        <v-card class="report-table-card report-table-card--sticky panel monthly-report-table-card">
+          <v-card-title class="report-table-title">
+            Новые партнеры
+            <span class="monthly-report__table-count">{{ newFilteredRows.length }}</span>
+          </v-card-title>
+
+          <v-data-table
+            :headers="newHeaders"
+            :items="newFilteredRows"
+            item-value="id"
+            density="comfortable"
+            hover
+            class="report-data-table report-data-table--paginated activity-report-table sticky-report-table monthly-report-table"
+            :items-per-page="25"
+            :row-props="getRowProps"
+          >
+            <template #header.calls="{ column }">
+              <span class="table-header__icon">
+                <v-icon icon="$phone" size="16" />
+                {{ column.title }}
+              </span>
+            </template>
+            <template #header.meetings="{ column }">
+              <span class="table-header__icon">
+                <v-icon icon="$calendar" size="16" />
+                {{ column.title }}
+              </span>
+            </template>
+
+            <template #item.partner="{ item }">
+              <div class="event-cell">
+                <div class="event-cell__title-row">
+                  <button
+                    type="button"
+                    class="monthly-table__partner-name event-link"
+                    @click="openContact(item.id)"
+                  >
+                    {{ item.partnerName }}
+                    <!-- <template v-if="item.organization">, {{ item.organization }}</template> -->
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  class="event-link event-link--secondary"
+                  @click="openReports(item)"
+                >
+                  Все отчёты
+                </button>
+              </div>
+            </template>
+
+            <template #item.assigned="{ item }">
+              <div v-if="getAssignedDisplay(item)" class="responsible-cell">
+                <v-avatar size="28" color="primary" variant="tonal">
+                  <img
+                    v-if="getAssignedPhoto(item)"
+                    :src="getAssignedPhoto(item)"
+                    :alt="getAssignedDisplay(item)?.shortName"
+                    class="avatar-image"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                    @error="markAvatarFailed(getAssignedPhoto(item))"
+                  >
+                  <span v-else class="avatar-initials">
+                    {{ getUserInitials(getAssignedDisplay(item)?.shortName || '') }}
+                  </span>
+                </v-avatar>
+                <span
+                  class="responsible-name"
+                  :title="getAssignedDisplay(item)?.name"
+                >
+                  {{ getAssignedDisplay(item)?.shortName }}
+                </span>
+              </div>
+              <span v-else class="monthly-table__text monthly-table__text--empty">—</span>
+            </template>
+
+            <template #item.nosologies="{ item }">
+              <button
+                type="button"
+                class="monthly-table__text"
+                :class="{ 'monthly-table__text--empty': !item.nosologies }"
+                @click="openFieldEditor(item, 'nosologies')"
+              >
+                {{ item.nosologies || '—' }}
+              </button>
+            </template>
+
+            <template #item.relationStatus="{ item }">
+              <div class="monthly-table__edit" @click.stop>
+                <v-autocomplete
+                  :model-value="item.relationStatusId || null"
+                  :items="relationStatusOptions"
+                  item-title="title"
+                  item-value="id"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  clearable
+                  placeholder="Статус отношений"
+                  class="monthly-table__input"
+                  :menu-props="{ maxHeight: 280 }"
+                  @update:model-value="onRelationStatusChange(item, $event)"
+                />
+              </div>
+            </template>
+
+            <template #item.interest="{ item }">
+              <v-textarea
+                v-model="item.interest"
+                density="compact"
+                variant="outlined"
+                hide-details
+                rows="2"
+                auto-grow
+                placeholder="Чем интересен"
+                class="monthly-table__input"
+                @click.stop
+                @blur="onInterestBlur(item)"
+              />
+            </template>
+
+            <template #item.agreementLink="{ item }">
+              <div v-if="item.agreementInfo" class="agreement-info">
+                <div class="agreement-info__item">
+                  <span class="agreement-info__label">Дата создания</span>
+                  <span class="agreement-info__value">{{ item.agreementInfo.created }}</span>
+                </div>
+                <div v-if="item.agreementInfo.source" class="agreement-info__item">
+                  <span class="agreement-info__label">Источник контакта</span>
+                  <span class="agreement-info__value">{{ item.agreementInfo.source }}</span>
+                </div>
+                <div v-if="item.agreementInfo.interest" class="agreement-info__item">
+                  <span class="agreement-info__label">Почему интересен</span>
+                  <span class="agreement-info__value">{{ item.agreementInfo.interest }}</span>
+                </div>
+                <div v-if="item.agreementInfo.currentStatus" class="agreement-info__item">
+                  <span class="agreement-info__label">Текущий статус</span>
+                  <span class="agreement-info__value">{{ item.agreementInfo.currentStatus }}</span>
+                </div>
+              </div>
+              <div v-else class="agreement-info__empty">
+                Нет договоренности
+              </div>
+            </template>
+
+            <template #item.ourEventsLink="{ item }">
+              <div v-if="item.events && item.events.length" class="events-list">
+                <button
+                  v-for="event in item.events"
+                  :key="event.id"
+                  type="button"
+                  class="events-list__item"
+                  @click="openEventDetails(event.id)"
+                >
+                  <span class="events-list__bullet">•</span>
+                  <span class="events-list__title">{{ event.title }}</span>
+                </button>
+              </div>
+              <div v-else class="events-list__empty">
+                Нет мероприятий
+              </div>
+            </template>
+
+            <template #item.calls="{ item }">
+              <button
+                type="button"
+                class="monthly-touch-cell"
+                @click="openTouchesDialog(item, 'calls')"
+              >
+                <strong>{{ touchCount(item, 'calls') }}</strong>
+              </button>
+            </template>
+
+            <template #item.emails="{ item }">
+              <button
+                type="button"
+                class="monthly-touch-cell"
+                @click="openTouchesDialog(item, 'emails')"
+              >
+                <strong>{{ touchCount(item, 'emails') }}</strong>
+              </button>
+            </template>
+
+            <template #item.meetings="{ item }">
+              <button
+                type="button"
+                class="monthly-touch-cell"
+                @click="openTouchesDialog(item, 'meetings')"
+              >
+                <strong>{{ touchCount(item, 'meetings') }}</strong>
+              </button>
+            </template>
+
+            <template #item.currentStatus="{ item }">
+              <div class="monthly-table__edit" @click.stop>
+                <v-autocomplete
+                  :model-value="item.currentStatusId || null"
+                  :items="currentStatusOptions"
+                  item-title="title"
+                  item-value="id"
+                  density="compact"
+                  variant="outlined"
+                  hide-details
+                  clearable
+                  placeholder="Текущий статус"
+                  class="monthly-table__input"
+                  :menu-props="{ maxHeight: 280 }"
+                  @update:model-value="onCurrentStatusChange(item, $event)"
+                />
+              </div>
+            </template>
+
+            <template #item.comment="{ item }">
+              <v-textarea
+                v-model="item.comment"
+                density="compact"
+                variant="outlined"
+                hide-details
+                rows="2"
+                auto-grow
+                class="monthly-table__input"
+                @click.stop
+              />
+            </template>
+
+            <template #item.nextStep="{ item }">
+              <v-textarea
+                v-model="item.nextStep"
+                density="compact"
+                variant="outlined"
+                hide-details
+                rows="2"
+                auto-grow
+                class="monthly-table__input"
+                @click.stop
+              />
+            </template>
+
+            <template #item.tasks="{ item }">
+              <button
+                type="button"
+                class="monthly-touch-cell"
+                @click="openTasksDialog(item)"
+              >
+                <span class="task-count-badge">{{ item.tasks }}</span>
+              </button>
+            </template>
+
+            <template #item.actions="{ item }">
+              <div class="event-actions">
+                <v-btn
+                  color="success"
+                  size="small"
+                  variant="flat"
+                  class="monthly-table__send"
+                  :loading="sendingRowId === item.id"
+                  :disabled="Boolean(sendingRowId)"
+                  @click="submitRow(item)"
+                >
+                  Отправить
+                  <template #append>
+                    <v-icon icon="$send" size="16" />
+                  </template>
                 </v-btn>
               </div>
             </template>
@@ -602,6 +933,7 @@ const rows = ref<MonthlyReportRow[]>([]);
 const relationStatusChipDefs = ref<MonthlyChipOption[]>([]);
 const relationStatusOptions = ref<Array<{ id: string; title: string }>>([]);
 const currentStatusChipDefs = ref<MonthlyChipOption[]>([]);
+const newCurrentStatusOptions = ref<Array<{ id: string; title: string }>>([]);
 const nosologyOptions = ref<Array<{ id: string; title: string }>>([]);
 
 const search = ref('');
@@ -634,11 +966,6 @@ const insightLinks = [
     path: '/crm/type/1262/list/category/0/',
   },
   {
-    id: 'competitor',
-    title: 'Конкурентные мероприятия и наблюдения',
-    path: '/crm/type/1210/list/category/0/',
-  },
-  {
     id: 'pain',
     title: 'Боли и предложения по улучшению',
     path: '/crm/type/1266/list/category/0/',
@@ -658,23 +985,12 @@ const fieldEditorIds = ref<string[]>([]);
 const monthOptions = monthlyMonthOptions;
 const yearOptions = monthlyYearOptions;
 
-const headers = [
+const actualHeaders = [
   { title: 'Партнер', key: 'partner', align: 'start' as const, sortable: false },
   { title: 'Ответственный', key: 'assigned', align: 'start' as const, sortable: false },
-  { title: 'Нозологии', key: 'nosologies', align: 'center' as const, sortable: false },
   { title: 'Статус отношений', key: 'relationStatus', align: 'center' as const, sortable: false },
-  { title: 'Чем интересен', key: 'interest', align: 'start' as const, sortable: false },
-  { title: 'Формирование договоренности', key: 'agreementLink', align: 'center' as const, sortable: false },
-  {
-    title: 'Мероприятия',
-    key: 'events',
-    align: 'center' as const,
-    sortable: false,
-    children: [
-      { title: 'Наши', key: 'ourEventsLink', align: 'center' as const, sortable: false },
-      { title: 'Конкурентов', key: 'competitorEventsLink', align: 'center' as const, sortable: false },
-    ],
-  },
+  { title: 'Нозологии', key: 'nosologies', align: 'center' as const, sortable: false },
+  { title: 'Мероприятия', key: 'ourEventsLink', align: 'center' as const, sortable: false },
   {
     title: 'Касаний за месяц',
     key: 'touches',
@@ -682,7 +998,31 @@ const headers = [
     sortable: false,
     children: [
       { title: 'Звонки', key: 'calls', align: 'center' as const, sortable: false },
-      { title: 'Письма', key: 'emails', align: 'center' as const, sortable: false },
+      { title: 'Встречи', key: 'meetings', align: 'center' as const, sortable: false },
+    ],
+  },
+  { title: 'Текущий статус', key: 'currentStatus', align: 'center' as const, sortable: false },
+  { title: 'Комментарий', key: 'comment', align: 'start' as const, sortable: false },
+  { title: 'Следующий шаг', key: 'nextStep', align: 'start' as const, sortable: false },
+  { title: 'Задачи', key: 'tasks', align: 'center' as const, sortable: false },
+  { title: 'Действия', key: 'actions', align: 'center' as const, sortable: false },
+];
+
+const newHeaders = [
+  { title: 'Партнер', key: 'partner', align: 'start' as const, sortable: false },
+  { title: 'Ответственный', key: 'assigned', align: 'start' as const, sortable: false },
+  { title: 'Нозологии', key: 'nosologies', align: 'center' as const, sortable: false },
+  { title: 'Статус отношений', key: 'relationStatus', align: 'center' as const, sortable: false },
+  { title: 'Чем интересен', key: 'interest', align: 'start' as const, sortable: false },
+  { title: 'Формирование договоренности', key: 'agreementLink', align: 'center' as const, sortable: false },
+  { title: 'Мероприятия', key: 'ourEventsLink', align: 'center' as const, sortable: false },
+  {
+    title: 'Касаний за месяц',
+    key: 'touches',
+    align: 'center' as const,
+    sortable: false,
+    children: [
+      { title: 'Звонки', key: 'calls', align: 'center' as const, sortable: false },
       { title: 'Встречи', key: 'meetings', align: 'center' as const, sortable: false },
     ],
   },
@@ -705,6 +1045,14 @@ const listFilterParams = computed(() => ({
 
 const baseFilteredRows = computed(() => filterMonthlyReportRows(rows.value, listFilterParams.value));
 
+const actualFilteredRows = computed(() =>
+  baseFilteredRows.value.filter((row) => row.partnerTypeId === 'active'),
+);
+
+const newFilteredRows = computed(() =>
+  baseFilteredRows.value.filter((row) => row.partnerTypeId === 'new'),
+);
+
 const touchesPeriod = computed(() =>
   resolveTouchesPeriod(selectedMonths.value, selectedYears.value),
 );
@@ -715,6 +1063,28 @@ const reportPeriod = computed(() =>
 
 const stats = computed(() => {
   const list = baseFilteredRows.value;
+  const { months, years } = touchesPeriod.value;
+  return {
+    total: list.length,
+    noTouches: list.filter((row) => !hasTouchesInPeriod(row, months, years)).length,
+    noNextStep: list.filter((row) => !hasNextStep(row)).length,
+    noReport: list.filter((row) => !contactIdsWithReport.value.has(String(row.id))).length,
+  };
+});
+
+const actualStats = computed(() => {
+  const list = actualFilteredRows.value;
+  const { months, years } = touchesPeriod.value;
+  return {
+    total: list.length,
+    noTouches: list.filter((row) => !hasTouchesInPeriod(row, months, years)).length,
+    noNextStep: list.filter((row) => !hasNextStep(row)).length,
+    noReport: list.filter((row) => !contactIdsWithReport.value.has(String(row.id))).length,
+  };
+});
+
+const newStats = computed(() => {
+  const list = newFilteredRows.value;
   const { months, years } = touchesPeriod.value;
   return {
     total: list.length,
@@ -746,6 +1116,41 @@ const currentStatusChips = computed(() =>
     'currentStatusId',
   ),
 );
+
+const actualRows = computed(() =>
+  rows.value.filter((row) => row.partnerTypeId === 'active'),
+);
+
+const newRows = computed(() =>
+  rows.value.filter((row) => row.partnerTypeId === 'new'),
+);
+
+const actualRelationStatusChips = computed(() =>
+  recountChips(
+    filterMonthlyReportRowsForChipCounts(actualRows.value, listFilterParams.value, 'relationStatuses'),
+    relationStatusChipDefs.value,
+    'relationStatusId',
+  ),
+);
+
+const actualCurrentStatusChips = computed(() =>
+  recountChips(
+    filterMonthlyReportRowsForChipCounts(actualRows.value, listFilterParams.value, 'currentStatuses'),
+    currentStatusChipDefs.value,
+    'currentStatusId',
+  ),
+);
+
+const newCurrentStatusChips = computed(() => {
+  const options = newCurrentStatusOptions.value.length > 0
+    ? newCurrentStatusOptions.value
+    : currentStatusChipDefs.value;
+  return recountChips(
+    filterMonthlyReportRowsForChipCounts(newRows.value, listFilterParams.value, 'currentStatuses'),
+    options,
+    'currentStatusId',
+  );
+});
 
 const currentStatusOptions = computed(() =>
   currentStatusChipDefs.value.map((chip) => ({
@@ -879,6 +1284,10 @@ function onInsightClick(link: { path: string }) {
   openLink(link.path);
 }
 
+function openMonthlySummary() {
+  openBitrixPath('/crm/type/1278/list/category/0/');
+}
+
 function openFieldEditor(row: MonthlyReportRow, kind: FieldEditorKind) {
   fieldEditorRow.value = row;
   fieldEditorKind.value = kind;
@@ -902,12 +1311,10 @@ async function onRelationStatusChange(row: MonthlyReportRow, statusId: string | 
   const option = relationStatusOptions.value.find((item) => item.id === nextId);
   const prevId = row.relationStatusId;
   const prevLabel = row.relationStatus;
-  const prevPartnerTypeId = row.partnerTypeId;
-  const labelMap = new Map(relationStatusOptions.value.map((item) => [item.id, item.title]));
 
   row.relationStatusId = nextId;
   row.relationStatus = option?.title ?? '';
-  row.partnerTypeId = resolvePartnerTypeId(nextId, labelMap);
+  // Не пересчитываем partnerTypeId при ручном изменении статуса
 
   savingCell.value = true;
   try {
@@ -915,7 +1322,6 @@ async function onRelationStatusChange(row: MonthlyReportRow, statusId: string | 
   } catch (error) {
     row.relationStatusId = prevId;
     row.relationStatus = prevLabel;
-    row.partnerTypeId = prevPartnerTypeId;
     console.error('Не удалось сохранить статус отношений:', error);
     window.alert('Не удалось сохранить статус отношений');
   } finally {
@@ -990,6 +1396,13 @@ function openLink(path: string) {
     return;
   }
   openBitrixPath(path);
+}
+
+function openEventDetails(eventId: string) {
+  if (!eventId) {
+    return;
+  }
+  openBitrixPath(`/crm/type/1052/details/${eventId}/`);
 }
 
 function openInNewWindow(path: string) {
@@ -1107,7 +1520,11 @@ watch(reportPeriod, () => {
   void refreshReportHighlights();
 }, { deep: true });
 
-watch(filteredRows, () => {
+watch(actualFilteredRows, () => {
+  void refreshTableScroll();
+});
+
+watch(newFilteredRows, () => {
   void refreshTableScroll();
 });
 
@@ -1126,12 +1543,16 @@ async function loadData() {
 
   try {
     loadingProgress.value = 25;
-    const data = await loadMonthlyReportData();
+    const data = await loadMonthlyReportData({
+      months: selectedMonths.value,
+      years: selectedYears.value,
+    });
     loadingProgress.value = 90;
     rows.value = data.rows;
     relationStatusChipDefs.value = data.relationStatusChips;
     relationStatusOptions.value = data.relationStatusOptions;
     currentStatusChipDefs.value = data.currentStatusChips;
+    newCurrentStatusOptions.value = data.newCurrentStatusOptions;
     nosologyOptions.value = data.nosologyOptions;
     await Promise.all([
       refreshUserDisplays(data.rows),
@@ -1158,3 +1579,131 @@ onUnmounted(() => {
   unmountStickyReportTableHeaders();
 });
 </script>
+
+<style scoped>
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.events-list__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #1a1a1a;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background-color 0.2s;
+}
+
+.events-list__item:hover {
+  background-color: #f5f5f5;
+}
+
+.events-list__bullet {
+  color: #1976d2;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.events-list__title {
+  word-break: break-word;
+}
+
+.events-list__empty {
+  color: #9e9e9e;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.agreement-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background-color: #e3f2fd;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.agreement-info__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agreement-info__label {
+  font-weight: 500;
+  color: #546e7a;
+  font-size: 11px;
+}
+
+.agreement-info__value {
+  color: #1a1a1a;
+  font-weight: 400;
+}
+
+.agreement-info__empty {
+  color: #9e9e9e;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.task-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 50%;
+  background-color: #e3f2fd;
+  color: #1565c0;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.table-header__icon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.table-header__icon .v-icon {
+  color: #1976d2;
+}
+
+.monthly-touch-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.monthly-touch-cell:hover {
+  background-color: #f5f5f5;
+}
+
+.monthly-touch-cell strong {
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+.monthly-touch-cell .v-icon {
+  color: #1976d2;
+}
+</style>

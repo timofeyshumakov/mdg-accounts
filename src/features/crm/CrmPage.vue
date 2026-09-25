@@ -8,6 +8,47 @@
     />
 
     <v-main class="crm-page">
+      <header class="report-header">
+        <div class="report-header__brand">
+          <img
+            :src="crmLogo"
+            alt="ЦРМ — Цифровое рабочее место"
+            class="report-header__logo"
+          />
+        </div>
+        <div class="report-header__actions">
+          <v-btn
+            variant="flat"
+            class="report-header__btn report-header__btn--outlined"
+            :loading="isLoading"
+            @click="loadDashboardData"
+          >
+            <template #prepend>
+              <v-icon icon="$refresh" />
+            </template>
+            Обновить
+          </v-btn>
+          <v-btn
+            variant="flat"
+            class="report-header__btn report-header__btn--outlined"
+          >
+            <template #prepend>
+              <v-icon icon="$trayArrowUp" />
+            </template>
+            Экспорт
+          </v-btn>
+          <v-btn
+            variant="flat"
+            class="report-header__btn report-header__btn--filled"
+          >
+            <template #prepend>
+              <v-icon icon="$cameraOutline" />
+            </template>
+            Сохранить отчёт
+          </v-btn>
+        </div>
+      </header>
+
       <section class="crm-nav-panel panel">
         <CrmNav
           :groups="navGroups"
@@ -84,6 +125,7 @@ import {
 } from './functions/crmFilters';
 import { runWhenBx24Ready } from './functions/bitrixReady';
 import { useAppZoom } from '../../composables/useAppZoom';
+import crmLogo from './assets/crm-logo.png';
 
 const { zoomStyle } = useAppZoom();
 const activeNavId = ref('crm');

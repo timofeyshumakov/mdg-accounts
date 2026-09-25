@@ -3,9 +3,11 @@ import { getBx24 } from './bitrixClient';
 import { openBitrixPath } from './bitrixPath';
 import { appendListFilterValues } from './bitrixListFilter';
 
-export const POTENTIAL_PARTNER_TYPE_IDS = ['SUPPLIER', 'UC_TG1YCL'] as const;
+export const ACTUAL_PARTNER_TYPE_ID = 'UC_TG1YCL';
+export const NEW_PARTNER_TYPE_ID = 'PARTNER';
 
-export const ACTUAL_PARTNER_TYPE_NAME = 'актуальный партнер';
+export const ACTUAL_PARTNER_TYPE_NAME = 'Актуальный партнер';
+export const NEW_PARTNER_TYPE_NAME = 'Новый партнер';
 
 export interface ContactTypeStatus {
   STATUS_ID: string;
@@ -21,7 +23,7 @@ function normalizeName(value: string): string {
 export function resolvePartnerTypeIds(
   types: ContactTypeStatus[] = [],
 ): string[] {
-  const ids = [...POTENTIAL_PARTNER_TYPE_IDS];
+  const ids = [ACTUAL_PARTNER_TYPE_ID, NEW_PARTNER_TYPE_ID];
 
   const actualPartner = types.find(
     (type) => normalizeName(type.NAME ?? '') === normalizeName(ACTUAL_PARTNER_TYPE_NAME),
@@ -29,6 +31,14 @@ export function resolvePartnerTypeIds(
 
   if (actualPartner?.STATUS_ID) {
     ids.push(actualPartner.STATUS_ID);
+  }
+
+  const newPartner = types.find(
+    (type) => normalizeName(type.NAME ?? '') === normalizeName(NEW_PARTNER_TYPE_NAME),
+  );
+
+  if (newPartner?.STATUS_ID) {
+    ids.push(newPartner.STATUS_ID);
   }
 
   return [...new Set(ids)];
@@ -114,8 +124,8 @@ export async function getPartnerTypeIds(): Promise<string[]> {
     const allTypes = await loadContactTypes();
     return resolvePartnerTypeIds(allTypes);
   } catch (error) {
-    console.warn('Не удалось загрузить тип «актуальный партнер», используем базовый фильтр:', error);
-    return [...POTENTIAL_PARTNER_TYPE_IDS];
+    console.warn('Не удалось загрузить типы контактов, используем базовый фильтр:', error);
+    return [ACTUAL_PARTNER_TYPE_ID, NEW_PARTNER_TYPE_ID];
   }
 }
 

@@ -9,6 +9,65 @@
   container-type: inline-size
   min-height: 100dvh
 
+.report-header
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 1rem
+  padding: 0.75rem 1rem
+  border: 1px solid rgba(148, 163, 184, 0.16)
+  border-radius: 18px
+  background: rgba(255, 255, 255, 0.94)
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.07)
+
+  &__brand
+    display: flex
+    align-items: center
+    gap: 0.75rem
+    min-width: 0
+
+  &__logo
+    width: 2.5rem
+    height: 2.5rem
+    border-radius: 0.5rem
+    object-fit: contain
+
+  &__title
+    font-size: 1.125rem
+    font-weight: 700
+    color: #0f172a
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
+
+  &__actions
+    display: flex
+    align-items: center
+    gap: 0.5rem
+    flex-shrink: 0
+
+  &__btn
+    text-transform: none
+    letter-spacing: 0
+
+    &--outlined
+      border: 1px solid #d1d5db
+      background: #fff
+      color: #111827
+
+      &:hover
+        background: #f9fafb
+        border-color: #9ca3af
+
+    &--filled
+      background: #2563eb
+      color: #fff
+      border: 1px solid #2563eb
+
+      &:hover
+        background: #1d4ed8
+        border-color: #1d4ed8
+
 .panel
   border: 1px solid rgba(148, 163, 184, 0.16)
   border-radius: 18px
@@ -407,6 +466,51 @@
       svg
         fill: currentColor
 
+  &__summary
+    padding: 0.75rem 1rem
+
+  &__summary-content
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 1rem
+
+  &__summary-text
+    display: flex
+    flex-direction: column
+    gap: 0.25rem
+    min-width: 0
+
+  &__summary-title
+    margin: 0
+    font-size: 1rem
+    font-weight: 700
+    color: #111827
+
+  &__summary-description
+    margin: 0
+    font-size: 0.8125rem
+    color: #64748b
+    line-height: 1.4
+
+  &__summary-btn
+    display: inline-flex
+    align-items: center
+    gap: 0.5rem
+    flex-shrink: 0
+    padding: 0
+    border: 0
+    background: transparent
+    color: #2563eb
+    font: inherit
+    font-size: 0.875rem
+    font-weight: 600
+    cursor: pointer
+    white-space: nowrap
+
+    .v-icon
+      color: #2563eb
+
   &__table-count
     display: inline-flex
     align-items: center
@@ -448,6 +552,13 @@
     font-size: 0.9375rem
     font-weight: 700
     color: #111827
+    flex-shrink:0
+
+  &__subtitle
+    margin: 0 0 0.5rem
+    font-size: 0.8125rem
+    font-weight: 600
+    color: #64748b
     flex-shrink: 0
 
   &__chips
@@ -560,7 +671,7 @@
 .report-table-section
   display: flex
   flex-direction: column
-  gap: 0
+  gap: 1rem
   flex: 1 1 auto
   min-height: 0
 

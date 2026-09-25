@@ -7,10 +7,10 @@ import {
   type ContactUserFieldRecord,
   type NamedCrmField,
   userFieldToMeta,
+  unwrapFieldsResponse,
 } from './bitrixFields';
 import {
   ACTUAL_PARTNER_TYPE_NAME,
-  POTENTIAL_PARTNER_TYPE_IDS,
   buildPartnersContactFilter,
   loadContactTypes,
   type ContactTypeStatus,
@@ -30,7 +30,14 @@ import {
   buildContactTasksListPath,
   loadTasksByContactIds,
 } from './monthlyTasks';
-import { buildAgreementListPath } from './monthlyAgreement';
+import { buildAgreementListPath, loadAgreementInfoForContacts } from './monthlyAgreement';
+import {
+  loadSpaCommentsForContacts,
+  resolveReportPeriod,
+} from './monthlyReportSubmit';
+import {
+  loadEventsForContacts,
+} from './ourEventsMetric';
 import type { MonthlyChipOption, MonthlyReportRow } from '../mock/monthlyReportData';
 
 /** Статус отношений / тип в отчётности. */
@@ -47,6 +54,12 @@ export const CURRENT_STATUS_FIELD = 'UF_CRM_1787148090748';
 
 /** Чем интересен. */
 export const INTEREST_FIELD = 'UF_CRM_1787151854817';
+
+/** Поле текущего статуса для новых контактов из смарт-процесса 1236. */
+export const NEW_CONTACT_STATUS_FIELD = 'UF_CRM_130_1789979741889';
+
+/** EntityTypeId смарт-процесса для новых контактов. */
+export const NEW_CONTACT_ENTITY_TYPE_ID = 1236;
 
 /** Мероприятия конкурентов (entityTypeId). */
 export const COMPETITOR_EVENTS_ENTITY_TYPE_ID = 1210;
@@ -81,6 +94,7 @@ export interface MonthlyReportLoadResult {
   relationStatusChips: MonthlyChipOption[];
   relationStatusOptions: Array<{ id: string; title: string }>;
   currentStatusChips: MonthlyChipOption[];
+  newCurrentStatusOptions: Array<{ id: string; title: string }>;
   nosologyOptions: Array<{ id: string; title: string }>;
 }
 
@@ -101,11 +115,20 @@ function resolveEnumLabel(
   if (!id) {
     return { id: '', label: '' };
   }
-  return { id, label: labelMap.get(id) ?? labelMap.get(String(raw)) ?? id };
+
+  // Приводим к пустому значению известные пустые/некорректные id
+  const emptyIds = new Set(['0', 'false', '11918']);
+  if (emptyIds.has(id)) {
+    return { id: '', label: '' };
+  }
+
+  const label = labelMap.get(id);
+  // Если id нет в маппинге — возвращаем пустую строку вместо id
+  return { id, label: label || '' };
 }
 
 export function resolveActivePartnerTypeIds(types: ContactTypeStatus[]): string[] {
-  const ids: string[] = [];
+  const ids: string[] = ['UC_TG1YCL'];
 
   types.forEach((type) => {
     const name = normalizeName(type.NAME ?? '');
@@ -124,11 +147,11 @@ export function resolveActivePartnerTypeIds(types: ContactTypeStatus[]): string[
 }
 
 export function resolvePotentialPartnerTypeIds(types: ContactTypeStatus[]): string[] {
-  const ids = [...POTENTIAL_PARTNER_TYPE_IDS];
+  const ids = ['PARTNER'];
 
   types.forEach((type) => {
     const name = normalizeName(type.NAME ?? '');
-    if (name.includes('потенциальн') && type.STATUS_ID) {
+    if (name.includes('новый') && type.STATUS_ID) {
       ids.push(type.STATUS_ID);
     }
   });
@@ -136,29 +159,50 @@ export function resolvePotentialPartnerTypeIds(types: ContactTypeStatus[]): stri
   return [...new Set(ids)];
 }
 
-/** Тип партнера = частые значения того же поля, что и «Статус отношений». */
-export function resolvePartnerTypeId(
-  relationStatusId: string,
-  relationLabelMap: Map<string, string>,
-): 'active' | 'new' | '' {
-  if (!relationStatusId) {
-    return '';
-  }
+/** Загрузка вариантов enum-поля из смарт-процесса. */
+export async function loadEnumFieldOptions(
+  entityTypeId: number,
+  fieldName: string,
+): Promise<Map<string, string>> {
+  try {
+    // Загружаем первые 100 элементов смарт-процесса с нужным полем
+    const items = await callBxMethod<Record<string, unknown>[]>('crm.item.list', {
+      entityTypeId,
+      filter: {},
+      select: [fieldName],
+      start: 0,
+    });
 
-  const label = normalizeName(
-    relationLabelMap.get(relationStatusId)
-      ?? relationLabelMap.get(String(relationStatusId))
-      ?? '',
-  );
+    console.log('loadEnumFieldOptions: loaded', items.length, 'items for', fieldName);
 
-  if (label === PARTNER_TYPE_RELATION_LABELS.active || label.includes('действующ')) {
-    return 'active';
-  }
-  if (label === PARTNER_TYPE_RELATION_LABELS.new) {
-    return 'new';
-  }
+    // Собираем уникальные значения поля
+    const valueSet = new Set<string>();
+    items.forEach((item) => {
+      const val = item[fieldName];
+      if (val != null && val !== '') {
+        if (typeof val === 'object' && 'value' in val) {
+          valueSet.add(String(val.value));
+        } else if (typeof val === 'string' || typeof val === 'number') {
+          valueSet.add(String(val));
+        }
+      }
+    });
 
-  return '';
+    if (valueSet.size > 0) {
+      const labelMap = new Map<string, string>();
+      valueSet.forEach((value) => {
+        labelMap.set(value, value);
+      });
+      console.log(`loadEnumFieldOptions: ${labelMap.size} unique values for ${fieldName}`);
+      return labelMap;
+    }
+
+    console.warn('loadEnumFieldOptions: no values found for', fieldName);
+    return new Map();
+  } catch (error) {
+    console.warn('Не удалось загрузить варианты поля', fieldName, ':', error);
+    return new Map();
+  }
 }
 
 function chipsFromLabelMap(
@@ -217,9 +261,32 @@ async function loadContactUserFields(): Promise<ContactUserFieldRecord[]> {
 async function resolveFieldMeta(
   fieldName: string,
   userFields: ContactUserFieldRecord[],
+  contactFields?: Record<string, NamedCrmField> | null,
 ): Promise<NamedCrmField | null> {
   const userField = userFields.find((field) => field.FIELD_NAME === fieldName) ?? null;
-  return userField ? userFieldToMeta(userField) : null;
+  const meta = userField ? userFieldToMeta(userField) : null;
+
+  // Если нет вариантов enum, пробуем загрузить из crm.contact.fields
+  if (!meta?.items && contactFields) {
+    // Пробуем найти поле по разным варианм имени
+    const fieldFromApi = contactFields[fieldName]
+      ?? contactFields[fieldName.toUpperCase()]
+      ?? contactFields[fieldName.toLowerCase()]
+      ?? Object.values(contactFields).find(f => f.upperName === fieldName || f.fieldName === fieldName) ?? null;
+
+    if (fieldFromApi && (fieldFromApi.items || fieldFromApi.LIST)) {
+      return {
+        title: fieldFromApi.title ?? meta?.title ?? '',
+        fieldName,
+        upperName: fieldFromApi.upperName ?? fieldName,
+        isMultiple: fieldFromApi.isMultiple,
+        items: fieldFromApi.items,
+        LIST: fieldFromApi.LIST,
+      };
+    }
+  }
+
+  return meta;
 }
 
 async function resolveNosologyLabels(
@@ -311,17 +378,26 @@ export function mapContactToMonthlyRow(
     return null;
   }
 
+  // Контакты уже отфильтрованы на уровне API по TYPE_ID
+  // Определяем тип партнера по TYPE_ID
   const typeId = String(contact.TYPE_ID ?? '');
-  const isPartnerByType = options.activeTypeIds.has(typeId) || options.potentialTypeIds.has(typeId);
-  if (!isPartnerByType) {
-    return null;
+  let partnerTypeId: 'active' | 'new' | '' = '';
+  if (options.activeTypeIds.has(typeId)) {
+    partnerTypeId = 'active';
+  } else if (options.potentialTypeIds.has(typeId)) {
+    partnerTypeId = 'new';
+  }
+
+  if (!partnerTypeId) {
+    console.log('mapContactToMonthlyRow: contact', id, 'TYPE_ID =', typeId, 'NOT in active or potential sets');
+    console.log('  activeTypeIds =', [...options.activeTypeIds]);
+    console.log('  potentialTypeIds =', [...options.potentialTypeIds]);
   }
 
   const relation = resolveEnumLabel(
     getRecordFieldValue(contact, RELATION_STATUS_FIELD, options.relationMeta),
     options.relationLabelMap,
   );
-  const partnerTypeId = resolvePartnerTypeId(relation.id, options.relationLabelMap);
   const current = resolveEnumLabel(
     getRecordFieldValue(contact, CURRENT_STATUS_FIELD, options.currentMeta),
     options.currentLabelMap,
@@ -387,12 +463,29 @@ export function mapContactToMonthlyRow(
 }
 
 export async function loadMonthlyReportData(
-  options: { contactIds?: string[] } = {},
+  options: { contactIds?: string[]; months?: number[]; years?: string[] } = {},
 ): Promise<MonthlyReportLoadResult> {
   const [types, userFields] = await Promise.all([
     loadContactTypes(),
     loadContactUserFields(),
   ]);
+
+  // Загружаем поля контактов для получения enum-вариантов
+  let contactFields: Record<string, NamedCrmField> | null = null;
+  try {
+    const rawFields = await callBxMethod<unknown>('crm.contact.fields', {});
+    if (rawFields && typeof rawFields === 'object') {
+      const unwrapped = unwrapFieldsResponse<Record<string, NamedCrmField>>(rawFields);
+      contactFields = unwrapped;
+      console.log('loadMonthlyReportData: contactFields keys =', Object.keys(unwrapped).slice(0, 10));
+      const relationField = Object.entries(unwrapped).find(([k]) => k.includes('1786959383413'));
+      if (relationField) {
+        console.log('loadMonthlyReportData: RELATION_STATUS_FIELD found =', relationField[0], 'items =', relationField[1]?.items ? 'present' : 'missing');
+      }
+    }
+  } catch (error) {
+    console.warn('Не удалось загрузить поля контактов:', error);
+  }
 
   const activeTypeIds = resolveActivePartnerTypeIds(types);
   const potentialTypeIds = resolvePotentialPartnerTypeIds(types);
@@ -409,21 +502,29 @@ export async function loadMonthlyReportData(
       relationStatusChips: [],
       relationStatusOptions: [],
       currentStatusChips: [],
+      newCurrentStatusOptions: [],
       nosologyOptions: [],
     };
   }
 
-  const [relationMeta, currentMeta, interestMeta, nosologyMeta, nosologyLabelMap] = await Promise.all([
-    resolveFieldMeta(RELATION_STATUS_FIELD, userFields),
-    resolveFieldMeta(CURRENT_STATUS_FIELD, userFields),
-    resolveFieldMeta(INTEREST_FIELD, userFields),
-    resolveFieldMeta(NOSOLOGY_CONTACT_FIELD, userFields),
+  const [relationMeta, currentMeta, interestMeta, nosologyMeta, nosologyLabelMap, newStatusLabelMap] = await Promise.all([
+    resolveFieldMeta(RELATION_STATUS_FIELD, userFields, contactFields),
+    resolveFieldMeta(CURRENT_STATUS_FIELD, userFields, contactFields),
+    resolveFieldMeta(INTEREST_FIELD, userFields, contactFields),
+    resolveFieldMeta(NOSOLOGY_CONTACT_FIELD, userFields, contactFields),
     resolveNosologyLabels(userFields),
+    loadEnumFieldOptions(NEW_CONTACT_ENTITY_TYPE_ID, NEW_CONTACT_STATUS_FIELD),
   ]);
 
   const relationLabelMap = buildLabelMapFromFieldDefinition(relationMeta);
   const currentLabelMap = buildLabelMapFromFieldDefinition(currentMeta);
   const interestLabelMap = buildLabelMapFromFieldDefinition(interestMeta);
+
+  console.log('loadMonthlyReportData: relationMeta items =', relationMeta?.items ? 'present' : 'missing');
+  console.log('loadMonthlyReportData: relationLabelMap size =', relationLabelMap.size);
+  if (relationLabelMap.size > 0) {
+    console.log('loadMonthlyReportData: relationLabelMap entries =', [...relationLabelMap.entries()].slice(0, 5));
+  }
 
   const select = [...new Set([
     ...buildContactListSelect(NOSOLOGY_CONTACT_FIELD, nosologyMeta, [
@@ -453,8 +554,31 @@ export async function loadMonthlyReportData(
     .filter(Boolean);
   const companyTitles = await loadCompanyTitles(companyIds);
 
+  // Загружаем комментарии из SPA-отчетов за текущий период
+  const loadedContactIds = contacts.map((contact) => String(contact.ID ?? '')).filter(Boolean);
+  const reportPeriod = resolveReportPeriod([]);
+  const spaComments = await loadSpaCommentsForContacts(loadedContactIds, reportPeriod);
+
+  // Загружаем мероприятия за выбранный период
+  const eventsPeriod = resolveTouchesPeriod(options.months ?? [], options.years ?? []);
+  const eventsByContact = await loadEventsForContacts(
+    loadedContactIds,
+    eventsPeriod.months,
+    eventsPeriod.years,
+  );
+
+  // Загружаем договоренности
+  const agreementsByContact = await loadAgreementInfoForContacts(loadedContactIds);
+
   const activeSet = new Set(activeTypeIds);
   const potentialSet = new Set(potentialTypeIds);
+
+  console.log('loadMonthlyReportData: activeTypeIds =', activeTypeIds);
+  console.log('loadMonthlyReportData: potentialTypeIds =', potentialTypeIds);
+  console.log('loadMonthlyReportData: contacts count =', contacts.length);
+  if (contacts.length > 0) {
+    console.log('loadMonthlyReportData: first contact TYPE_ID =', contacts[0].TYPE_ID);
+  }
 
   const rows = contacts
     .map((contact) => {
@@ -473,7 +597,24 @@ export async function loadMonthlyReportData(
       });
 
       if (mapped) {
-        return mapped;
+        // Добавляем комментарий из SPA-отчета
+        const contactId = String(contact.ID ?? '');
+        const spaComment = spaComments.get(contactId);
+        const contactEvents = eventsByContact.get(contactId) ?? [];
+        const agreementInfo = agreementsByContact.get(contactId) || null;
+        
+        const result = {
+          ...mapped,
+          comment: spaComment || mapped.comment,
+          events: contactEvents.map((ev) => ({
+            id: ev.id,
+            title: ev.title,
+            startDate: ev.startDate,
+            endDate: ev.endDate,
+          })),
+          agreementInfo,
+        };
+        return result;
       }
 
       // Для точечных тестов по ID допускаем контакт вне типов партнёра.
@@ -487,7 +628,7 @@ export async function loadMonthlyReportData(
       }
 
       const forcedActive = new Set([...activeSet, String(contact.TYPE_ID ?? '')]);
-      return mapContactToMonthlyRow(contact, {
+      const mappedForced = mapContactToMonthlyRow(contact, {
         activeTypeIds: forcedActive,
         potentialTypeIds: potentialSet,
         relationLabelMap,
@@ -500,6 +641,40 @@ export async function loadMonthlyReportData(
         interestMeta,
         nosologyMeta,
       });
+
+      // Добавляем комментарий из SPA-отчета
+      const spaComment = spaComments.get(id);
+      const contactEvents = eventsByContact.get(id) ?? [];
+      const agreementInfo = agreementsByContact.get(id) || null;
+      
+      if (spaComment && mappedForced) {
+        return {
+          ...mappedForced,
+          comment: spaComment,
+          events: contactEvents.map((ev) => ({
+            id: ev.id,
+            title: ev.title,
+            startDate: ev.startDate,
+            endDate: ev.endDate,
+          })),
+          agreementInfo,
+        };
+      }
+      
+      if (mappedForced) {
+        return {
+          ...mappedForced,
+          events: contactEvents.map((ev) => ({
+            id: ev.id,
+            title: ev.title,
+            startDate: ev.startDate,
+            endDate: ev.endDate,
+          })),
+          agreementInfo,
+        };
+      }
+
+      return mappedForced;
     })
     .filter((row): row is MonthlyReportRow => row != null)
     .sort((left, right) => left.partnerName.localeCompare(right.partnerName, 'ru'));
@@ -564,9 +739,17 @@ export async function loadMonthlyReportData(
   }
 
   const relationStatusOptions = [...relationLabelMap.entries()]
-    .filter(([id]) => /^\d+$/.test(id))
     .map(([id, title]) => ({ id, title }))
-    .filter((option, index, list) => list.findIndex((item) => item.id === option.id) === index)
+    .filter((option, index, list) => {
+      // Фильтруем дубликаты по id и по title
+      if (list.findIndex((item) => item.id === option.id) !== index) {
+        return false;
+      }
+      if (list.findIndex((item) => item.title === option.title) !== index) {
+        return false;
+      }
+      return true;
+    })
     .sort((left, right) => relationStatusSortKey(left) - relationStatusSortKey(right));
 
   return {
@@ -592,6 +775,10 @@ export async function loadMonthlyReportData(
     ),
     relationStatusOptions,
     currentStatusChips: chipsFromLabelMap(currentLabelMap, rowsWithTouches, 'currentStatusId'),
+    newCurrentStatusOptions: [...newStatusLabelMap.entries()]
+      .filter(([id]) => /^\d+$/.test(id))
+      .map(([id, title]) => ({ id, title }))
+      .sort((left, right) => left.title.localeCompare(right.title, 'ru')),
     nosologyOptions,
   };
 }

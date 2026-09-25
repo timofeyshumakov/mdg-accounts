@@ -1,4 +1,5 @@
 import { callBxMethod, fetchAllCrmItems } from './bitrixApi';
+import { extractScalarValues } from './bitrixFields';
 import { appendCrmContactListFilter } from './bitrixListFilter';
 import {
   filterTouches,
@@ -225,6 +226,58 @@ export async function createMonthlyReportSpaItem(
   }
 
   return { id };
+}
+
+/** Загрузка комментариев из SPA-отчетов для контактов за указанный период. */
+export async function loadSpaCommentsForContacts(
+  contactIds: string[],
+  period: MonthlyReportPeriod,
+): Promise<Map<string, string>> {
+  const commentMap = new Map<string, string>();
+
+  if (!contactIds.length) {
+    return commentMap;
+  }
+
+  const select = [
+    'id',
+    'contactId',
+    'CONTACT_ID',
+    MONTHLY_REPORT_SPA_FIELDS.comment,
+    MONTHLY_REPORT_SPA_FIELDS.reportDate,
+    MONTHLY_REPORT_SPA_FIELDS.reportDateUpper,
+  ];
+
+  try {
+    const items = await fetchAllCrmItems(
+      MONTHLY_REPORT_SPA_ENTITY_TYPE_ID,
+      select,
+      { [MONTHLY_REPORT_SPA_FIELDS.reportDate]: formatReportPeriodDate(period) },
+    );
+
+    items.forEach((item) => {
+      if (!spaItemMatchesReportPeriod(item, period)) {
+        return;
+      }
+
+      const contactId = extractContactIdFromSpaItem(item);
+      const comment = firstScalar(item[MONTHLY_REPORT_SPA_FIELDS.comment]
+        ?? item[MONTHLY_REPORT_SPA_FIELDS.comment?.replace('ufCrm', 'UF_CRM_') ?? '']);
+
+      if (contactId && comment) {
+        commentMap.set(contactId, comment);
+      }
+    });
+  } catch (error) {
+    console.warn('Не удалось загрузить комментарии из SPA-отчетов:', error);
+  }
+
+  return commentMap;
+}
+
+function firstScalar(value: unknown): string {
+  const values = extractScalarValues(value);
+  return values[0] ? String(values[0]) : '';
 }
 
 export { TOUCHES_ENTITY_TYPE_ID };

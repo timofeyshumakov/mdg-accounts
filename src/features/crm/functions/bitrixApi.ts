@@ -138,6 +138,8 @@ async function fetchAllPagesBatch<T>(
 ): Promise<T[]> {
   const items: T[] = [];
   let start = 0;
+  let consecutiveEmptyPages = 0;
+  const MAX_EMPTY_PAGES = 3;
 
   while (start <= LIST_MAX_START) {
     const pageStarts: number[] = [];
@@ -162,6 +164,7 @@ async function fetchAllPagesBatch<T>(
 
     const batchResults = await callBxBatch(commands);
     let reachedEnd = false;
+    let pageHasData = false;
 
     for (let index = 0; index < pageStarts.length; index += 1) {
       const entry = batchResults[`p${index}`];
@@ -174,7 +177,19 @@ async function fetchAllPagesBatch<T>(
       }
 
       const page = extractPageItems<T>(entry.data());
+      
+      if (page.length === 0) {
+        consecutiveEmptyPages += 1;
+        if (consecutiveEmptyPages >= MAX_EMPTY_PAGES) {
+          reachedEnd = true;
+          break;
+        }
+        continue;
+      }
+      
+      consecutiveEmptyPages = 0;
       items.push(...page);
+      pageHasData = true;
 
       const total = Number(entry.total?.() ?? 0);
       if (page.length < LIST_PAGE_SIZE || (total > 0 && items.length >= total)) {
@@ -184,6 +199,10 @@ async function fetchAllPagesBatch<T>(
     }
 
     if (reachedEnd) {
+      break;
+    }
+
+    if (!pageHasData) {
       break;
     }
 

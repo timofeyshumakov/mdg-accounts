@@ -30,6 +30,12 @@ export interface MonthlyReportRow {
   relationStatusId: string;
   interest: string;
   agreementLink: string;
+  agreementInfo: {
+    created: string;
+    source: string;
+    interest: string;
+    currentStatus: string;
+  } | null;
   ourEventsLink: string;
   competitorEventsLink: string;
   calls: number;
@@ -49,6 +55,7 @@ export interface MonthlyReportRow {
   assignedId: string;
   month: number;
   year: string;
+  events: Array<{ id: string; title: string; startDate: string; endDate: string }>;
 }
 
 export const monthlyMonthOptions = MONTH_OPTIONS;
