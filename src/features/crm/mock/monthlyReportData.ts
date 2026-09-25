@@ -31,11 +31,13 @@ export interface MonthlyReportRow {
   interest: string;
   agreementLink: string;
   agreementInfo: {
-    created: string;
+    id: string;
+    createdTime: string;
     source: string;
     interest: string;
     currentStatus: string;
   } | null;
+  agreementId: string;
   ourEventsLink: string;
   competitorEventsLink: string;
   calls: number;

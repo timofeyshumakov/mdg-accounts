@@ -17,6 +17,11 @@ export const MONTHLY_REPORT_SPA_FIELDS = {
   reportDate: 'ufCrm140_1787238020861',
   reportDateUpper: 'UF_CRM_140_1787238020861',
   currentStatus: 'ufCrm140_1787238112663',
+  events: 'ufCrm140_1790349186',
+  agreement: 'ufCrm140_1790349225',
+  source: 'UF_CRM_140_1790349250',
+  interest: 'UF_CRM_140_1790349266',
+  newPartnerCurrentStatus: 'UF_CRM_140_1790349233',
 } as const;
 
 export interface MonthlyReportPeriod {
@@ -86,15 +91,52 @@ export function buildMonthlyReportSpaFields(
   period: MonthlyReportPeriod,
 ): Record<string, unknown> {
   const periodTouches = getPeriodTouches(row.touches ?? [], period);
+
+  const periodEvents = (row.events ?? [])
+    .filter((event) => {
+      const eventDate = new Date(event.startDate);
+      return eventDate.getMonth() + 1 === period.month
+        && String(eventDate.getFullYear()) === period.year;
+    })
+    .map((event) => {
+      const rawId = event.id;
+      if (Array.isArray(rawId) && rawId.length > 0) {
+        return String(rawId[0] ?? '');
+      }
+      if (rawId && typeof rawId === 'object' && 'id' in rawId) {
+        return String((rawId as Record<string, unknown>).id ?? '');
+      }
+      if (rawId && typeof rawId === 'object' && 'ID' in rawId) {
+        return String((rawId as Record<string, unknown>).ID ?? '');
+      }
+      return String(rawId ?? '');
+    });
+
+  const isNewPartner = row.partnerTypeId === 'new';
+
   const fields: Record<string, unknown> = {
     title: buildMonthlyReportSpaTitle(row, period),
     contactId: Number(row.id) || row.id,
     [MONTHLY_REPORT_SPA_FIELDS.touches]: periodTouches.map((touch) => touch.id),
+    [MONTHLY_REPORT_SPA_FIELDS.events]: periodEvents,
     [MONTHLY_REPORT_SPA_FIELDS.comment]: row.comment ?? '',
     [MONTHLY_REPORT_SPA_FIELDS.nextStep]: row.nextStep ?? '',
     [MONTHLY_REPORT_SPA_FIELDS.reportDate]: formatReportPeriodDate(period),
     [MONTHLY_REPORT_SPA_FIELDS.currentStatus]: row.currentStatus ?? '',
   };
+
+  if (isNewPartner) {
+    fields[MONTHLY_REPORT_SPA_FIELDS.agreement] = row.agreementId;
+    if (row.agreementInfo?.source) {
+      fields[MONTHLY_REPORT_SPA_FIELDS.source] = row.agreementInfo.source;
+    }
+    if (row.agreementInfo?.interest || row.interest) {
+      fields[MONTHLY_REPORT_SPA_FIELDS.interest] = row.agreementInfo?.interest || row.interest;
+    }
+    if (row.agreementInfo?.currentStatus) {
+      fields[MONTHLY_REPORT_SPA_FIELDS.newPartnerCurrentStatus] = row.agreementInfo.currentStatus;
+    }
+  }
 
   if (row.assignedId) {
     fields.assignedById = Number(row.assignedId) || row.assignedId;

@@ -1,5 +1,5 @@
 import { appendCrmContactListFilter } from './bitrixListFilter';
-import { fetchAllCrmItems } from './bitrixApi';
+import { fetchAllCrmItems, callBxMethod } from './bitrixApi';
 
 /** Формирование договорённости. */
 export const AGREEMENT_ENTITY_TYPE_ID = 1236;
@@ -7,10 +7,12 @@ export const AGREEMENT_ENTITY_TYPE_ID = 1236;
 export const AGREEMENT_LIST_PATH = `/crm/type/${AGREEMENT_ENTITY_TYPE_ID}/list/category/0/`;
 
 export interface AgreementInfo {
-  created: string;
+  id: string;
+  createdTime: string;
   source: string;
   interest: string;
   currentStatus: string;
+  currentStatusId: string;
 }
 
 export function buildAgreementListPath(
@@ -26,6 +28,76 @@ export function buildAgreementCreatePath(contactId: string): string {
   return `/crm/type/${AGREEMENT_ENTITY_TYPE_ID}/details/0/?contactId=${encodeURIComponent(contactId)}`;
 }
 
+const CURRENT_STATUS_FIELD = 'UF_CRM_130_1789979741889';
+
+/** Загрузка полей смарт-процесса договоренностей. */
+async function loadAgreementFields(): Promise<Map<string, string>> {
+  try {
+    const raw = await callBxMethod<Record<string, unknown>>(
+      'crm.item.fields',
+      { entityTypeId: AGREEMENT_ENTITY_TYPE_ID },
+    );
+
+    const fieldData = raw?.['fields'] ?? raw;
+    const fieldMap = new Map<string, string>();
+    if (fieldData && typeof fieldData === 'object') {
+      // Ключи объекта - это имена полей
+      Object.keys(fieldData as Record<string, unknown>).forEach((key) => {
+        fieldMap.set(key, key);
+      });
+    }
+
+    console.log('loadAgreementFields: loaded fields =', [...fieldMap.entries()].slice(0, 10));
+    return fieldMap;
+  } catch (error) {
+    console.warn('Не удалось загрузить поля смарт-процесса договоренностей:', error);
+    return new Map();
+  }
+}
+
+/** Загрузка вариантов enum-поля текущего статуса из смарт-процесса. */
+async function loadCurrentStatusEnumMap(fieldMap: Map<string, string>): Promise<Map<string, string>> {
+  try {
+    const raw = await callBxMethod<Record<string, unknown>>(
+      'crm.item.fields',
+      { entityTypeId: AGREEMENT_ENTITY_TYPE_ID },
+    );
+
+    const fieldsData = raw?.['fields'] ?? raw;
+    
+    // Пробуем оба варианта имени поля
+    const fieldData = fieldsData?.[CURRENT_STATUS_FIELD] ?? fieldsData?.[CURRENT_STATUS_FIELD.replace('UF_CRM_', 'ufCrm')];
+    console.log('loadCurrentStatusEnumMap: fieldData =', JSON.stringify(fieldData).slice(0, 500));
+
+    if (fieldData && typeof fieldData === 'object' && 'items' in fieldData) {
+      const items = (fieldData as Record<string, unknown>).items as Array<{ ID?: string | number; VALUE?: string }>;
+      if (Array.isArray(items) && items.length > 0) {
+        const labelMap = new Map<string, string>();
+        items.forEach((item) => {
+          const id = String(item.ID ?? '');
+          const value = String(item.VALUE ?? '');
+          if (id && value) {
+            labelMap.set(id, value);
+            // Также добавляем как числовой ключ для совместимости
+            const numId = String(Number(id));
+            if (numId !== id) {
+              labelMap.set(numId, value);
+            }
+          }
+        });
+        console.log('loadCurrentStatusEnumMap: loaded', labelMap.size, 'items =', [...labelMap.entries()]);
+        return labelMap;
+      }
+    }
+
+    console.warn('loadCurrentStatusEnumMap: no items found');
+    return new Map();
+  } catch (error) {
+    console.warn('Не удалось загрузить варианты текущего статуса:', error);
+    return new Map();
+  }
+}
+
 /** Загрузка последней договоренности для контактов. */
 export async function loadAgreementInfoForContacts(
   contactIds: string[],
@@ -36,19 +108,28 @@ export async function loadAgreementInfoForContacts(
     return agreementMap;
   }
 
+  const fieldMap = await loadAgreementFields();
+  const currentStatusLabelMap = await loadCurrentStatusEnumMap(fieldMap);
+
+  const sourceFieldName = fieldMap.get('UF_CRM_130_1790000021910') ?? 'UF_CRM_130_1790000021910';
+  const interestFieldName = fieldMap.get('UF_CRM_130_1789979240282') ?? 'UF_CRM_130_1789979240282';
+  const currentStatusFieldName = fieldMap.get(CURRENT_STATUS_FIELD) ?? CURRENT_STATUS_FIELD;
+
   const select = [
     'id',
     'contactId',
     'CONTACT_ID',
-    'created',
-    'CREATED_DATE',
-    'source',
-    'SOURCE',
-    'interest',
-    'INTEREST',
-    'currentStatus',
-    'CURRENT_STATUS',
+    'createdTime',
+    'CREATEDTIME',
+    sourceFieldName,
+    sourceFieldName.replace('UF_CRM_', 'ufCrm'),
+    interestFieldName,
+    interestFieldName.replace('UF_CRM_', 'ufCrm'),
+    currentStatusFieldName,
+    currentStatusFieldName.replace('UF_CRM_', 'ufCrm'),
   ];
+
+  console.log('loadAgreementInfoForContacts: sourceFieldName =', sourceFieldName, 'interestFieldName =', interestFieldName, 'currentStatusFieldName =', currentStatusFieldName);
 
   try {
     const items = await fetchAllCrmItems(
@@ -68,16 +149,34 @@ export async function loadAgreementInfoForContacts(
         return;
       }
 
-      const created = formatDate(item.created ?? item.CREATED_DATE);
-      const source = firstScalar(item.source ?? item.SOURCE);
-      const interest = firstScalar(item.interest ?? item.INTEREST);
-      const currentStatus = firstScalar(item.currentStatus ?? item.CURRENT_STATUS);
+      const id = String(item.id ?? item.ID ?? '');
+      const createdTime = formatDate(item.createdTime ?? item.CREATEDTIME);
+      const source = firstScalar(item[sourceFieldName] ?? item[sourceFieldName.replace('UF_CRM_', 'ufCrm')]);
+      const interest = firstScalar(item[interestFieldName] ?? item[interestFieldName.replace('UF_CRM_', 'ufCrm')]);
+      const rawStatus = item[currentStatusFieldName] ?? item[currentStatusFieldName.replace('UF_CRM_', 'ufCrm')];
+      
+      let statusId = '';
+      if (Array.isArray(rawStatus) && rawStatus.length > 0) {
+        statusId = String(rawStatus[0] ?? '');
+      } else if (rawStatus && typeof rawStatus === 'object' && 'value' in rawStatus) {
+        statusId = String((rawStatus as Record<string, unknown>).value ?? '');
+      } else if (rawStatus && typeof rawStatus === 'object' && 'ID' in rawStatus) {
+        statusId = String((rawStatus as Record<string, unknown>).ID ?? '');
+      } else {
+        statusId = String(rawStatus ?? '');
+      }
+      statusId = statusId.trim();
+      const currentStatus = currentStatusLabelMap.get(statusId) || statusId;
+
+      console.log('loadAgreementInfoForContacts: contactId =', contactId, 'rawStatus =', JSON.stringify(rawStatus), 'statusId =', statusId, 'currentStatus =', currentStatus, 'mapSize =', currentStatusLabelMap.size, 'mapKeys =', [...currentStatusLabelMap.keys()]);
 
       agreementMap.set(contactId, {
-        created,
+        id,
+        createdTime,
         source,
         interest,
         currentStatus,
+        currentStatusId: statusId,
       });
     });
   } catch (error) {

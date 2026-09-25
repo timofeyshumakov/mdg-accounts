@@ -635,79 +635,28 @@
               </button>
             </template>
 
-            <template #item.relationStatus="{ item }">
-              <div class="monthly-table__edit" @click.stop>
-                <v-autocomplete
-                  :model-value="item.relationStatusId || null"
-                  :items="relationStatusOptions"
-                  item-title="title"
-                  item-value="id"
-                  density="compact"
-                  variant="outlined"
-                  hide-details
-                  clearable
-                  placeholder="Статус отношений"
-                  class="monthly-table__input"
-                  :menu-props="{ maxHeight: 280 }"
-                  @update:model-value="onRelationStatusChange(item, $event)"
-                />
-              </div>
-            </template>
-
-            <template #item.interest="{ item }">
-              <v-textarea
-                v-model="item.interest"
-                density="compact"
-                variant="outlined"
-                hide-details
-                rows="2"
-                auto-grow
-                placeholder="Чем интересен"
-                class="monthly-table__input"
-                @click.stop
-                @blur="onInterestBlur(item)"
-              />
-            </template>
-
             <template #item.agreementLink="{ item }">
-              <div v-if="item.agreementInfo" class="agreement-info">
-                <div class="agreement-info__item">
-                  <span class="agreement-info__label">Дата создания</span>
-                  <span class="agreement-info__value">{{ item.agreementInfo.created }}</span>
+              <button
+                v-if="item.agreementInfo"
+                type="button"
+                class="agreement-cell"
+                @click="openAgreement(item.agreementInfo.id)"
+              >
+                <div class="agreement-cell__item" v-if="item.agreementInfo.createdTime">
+                  <span class="agreement-cell__text">Дата создания: {{ item.agreementInfo.createdTime }}</span>
                 </div>
-                <div v-if="item.agreementInfo.source" class="agreement-info__item">
-                  <span class="agreement-info__label">Источник контакта</span>
-                  <span class="agreement-info__value">{{ item.agreementInfo.source }}</span>
+                <div class="agreement-cell__item" v-if="item.agreementInfo.source">
+                  <span class="agreement-cell__text">Источник: {{ item.agreementInfo.source }}</span>
                 </div>
-                <div v-if="item.agreementInfo.interest" class="agreement-info__item">
-                  <span class="agreement-info__label">Почему интересен</span>
-                  <span class="agreement-info__value">{{ item.agreementInfo.interest }}</span>
+                <div class="agreement-cell__item" v-if="item.agreementInfo.interest">
+                  <span class="agreement-cell__text">Почему интересен: {{ item.agreementInfo.interest }}</span>
                 </div>
-                <div v-if="item.agreementInfo.currentStatus" class="agreement-info__item">
-                  <span class="agreement-info__label">Текущий статус</span>
-                  <span class="agreement-info__value">{{ item.agreementInfo.currentStatus }}</span>
+                <div class="agreement-cell__item" v-if="item.agreementInfo.currentStatus">
+                  <span class="agreement-cell__text">Текущий статус: {{ item.agreementInfo.currentStatus }}</span>
                 </div>
-              </div>
+              </button>
               <div v-else class="agreement-info__empty">
                 Нет договоренности
-              </div>
-            </template>
-
-            <template #item.ourEventsLink="{ item }">
-              <div v-if="item.events && item.events.length" class="events-list">
-                <button
-                  v-for="event in item.events"
-                  :key="event.id"
-                  type="button"
-                  class="events-list__item"
-                  @click="openEventDetails(event.id)"
-                >
-                  <span class="events-list__bullet">•</span>
-                  <span class="events-list__title">{{ event.title }}</span>
-                </button>
-              </div>
-              <div v-else class="events-list__empty">
-                Нет мероприятий
               </div>
             </template>
 
@@ -989,7 +938,7 @@ const actualHeaders = [
   { title: 'Партнер', key: 'partner', align: 'start' as const, sortable: false },
   { title: 'Ответственный', key: 'assigned', align: 'start' as const, sortable: false },
   { title: 'Статус отношений', key: 'relationStatus', align: 'center' as const, sortable: false },
-  { title: 'Нозологии', key: 'nosologies', align: 'center' as const, sortable: false },
+  { title: 'Нозологии', key: 'nosologies', align: 'center' as const, sortable: false, width: '12%' },
   { title: 'Мероприятия', key: 'ourEventsLink', align: 'center' as const, sortable: false },
   {
     title: 'Касаний за месяц',
@@ -1012,10 +961,7 @@ const newHeaders = [
   { title: 'Партнер', key: 'partner', align: 'start' as const, sortable: false },
   { title: 'Ответственный', key: 'assigned', align: 'start' as const, sortable: false },
   { title: 'Нозологии', key: 'nosologies', align: 'center' as const, sortable: false },
-  { title: 'Статус отношений', key: 'relationStatus', align: 'center' as const, sortable: false },
-  { title: 'Чем интересен', key: 'interest', align: 'start' as const, sortable: false },
   { title: 'Формирование договоренности', key: 'agreementLink', align: 'center' as const, sortable: false },
-  { title: 'Мероприятия', key: 'ourEventsLink', align: 'center' as const, sortable: false },
   {
     title: 'Касаний за месяц',
     key: 'touches',
@@ -1026,7 +972,6 @@ const newHeaders = [
       { title: 'Встречи', key: 'meetings', align: 'center' as const, sortable: false },
     ],
   },
-  { title: 'Текущий статус', key: 'currentStatus', align: 'center' as const, sortable: false },
   { title: 'Комментарий', key: 'comment', align: 'start' as const, sortable: false },
   { title: 'Следующий шаг', key: 'nextStep', align: 'start' as const, sortable: false },
   { title: 'Задачи', key: 'tasks', align: 'center' as const, sortable: false },
@@ -1427,6 +1372,13 @@ function openReports(row: MonthlyReportRow) {
   openBitrixPath(buildMonthlyReportSpaListPath(row.id, label || undefined));
 }
 
+function openAgreement(agreementId: string) {
+  if (!agreementId) {
+    return;
+  }
+  openBitrixPath(`/crm/type/1236/details/${agreementId}/`);
+}
+
 function touchCount(row: MonthlyReportRow, kind: TouchKind): number {
   return countTouchesByKind(
     row.touches ?? [],
@@ -1590,8 +1542,8 @@ onUnmounted(() => {
 
 .events-list__item {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: start;
+  gap: 4px;
   padding: 4px 8px;
   background: transparent;
   border: none;
@@ -1609,9 +1561,10 @@ onUnmounted(() => {
 }
 
 .events-list__bullet {
-  color: #1976d2;
-  font-size: 16px;
-  line-height: 1;
+    color: #1976d2;
+    font-size: 3.75rem;
+    margin-left: -0.7rem;
+    line-height: 0.15;
 }
 
 .events-list__title {
@@ -1655,6 +1608,33 @@ onUnmounted(() => {
   color: #9e9e9e;
   font-size: 12px;
   font-style: italic;
+}
+
+.agreement-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background-color 0.2s;
+}
+
+.agreement-cell:hover {
+  background-color: #f5f5f5;
+}
+
+.agreement-cell__item {
+  font-size: 12px;
+  color: #1a1a1a;
+}
+
+.agreement-cell__text {
+  color: #1a1a1a;
 }
 
 .task-count-badge {

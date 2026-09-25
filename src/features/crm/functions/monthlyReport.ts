@@ -613,6 +613,7 @@ export async function loadMonthlyReportData(
             endDate: ev.endDate,
           })),
           agreementInfo,
+          agreementId: agreementInfo?.id ?? '',
         };
         return result;
       }
@@ -658,6 +659,7 @@ export async function loadMonthlyReportData(
             endDate: ev.endDate,
           })),
           agreementInfo,
+          agreementId: agreementInfo?.id ?? '',
         };
       }
       
@@ -671,6 +673,7 @@ export async function loadMonthlyReportData(
             endDate: ev.endDate,
           })),
           agreementInfo,
+          agreementId: agreementInfo?.id ?? '',
         };
       }
 
