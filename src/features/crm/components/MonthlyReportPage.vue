@@ -529,7 +529,7 @@
             <template #item.actions="{ item }">
               <div class="event-actions">
                 <v-btn
-                  color="white"
+                  color="green"
                   size="small"
                   variant="flat"
                   class="monthly-table__send"
@@ -748,7 +748,7 @@
             <template #item.actions="{ item }">
               <div class="event-actions">
                 <v-btn
-                  color="white"
+                  color="green"
                   size="small"
                   variant="flat"
                   class="monthly-table__send"
@@ -1688,14 +1688,14 @@ onUnmounted(() => {
 }
 
 .monthly-table__send {
-  background-color: #ffffff !important;
-  border: 1px solid #e0e0e0 !important;
-  color: #1a1a1a !important;
+  background-color: #4caf50 !important;
+  border: 1px solid #4caf50 !important;
+  color: #ffffff !important;
   font-weight: 500;
 }
 
 .monthly-table__send:hover {
-  background-color: #f5f5f5 !important;
+  background-color: #43a047 !important;
 }
 
 .monthly-table__send .v-icon {
