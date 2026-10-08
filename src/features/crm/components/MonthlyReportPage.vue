@@ -1458,6 +1458,7 @@ async function submitRow(row: MonthlyReportRow) {
     // По умолчанию период = текущий месяц; касания в SPA только за этот период.
     const period = resolveReportPeriod(selectedMonths.value, selectedYears.value);
     const created = await createMonthlyReportSpaItem(row, period);
+    contactIdsWithReport.value = new Set([...contactIdsWithReport.value, String(row.id)]);
     openBitrixPath(buildMonthlyReportSpaDetailsPath(created.id), () => {
       void refreshReportHighlights();
     });

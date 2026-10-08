@@ -556,7 +556,7 @@ export async function loadMonthlyReportData(
 
   // Комментарий и следующий шаг из SPA-отчётов за текущий период
   const loadedContactIds = contacts.map((contact) => String(contact.ID ?? '')).filter(Boolean);
-  const reportPeriod = resolveReportPeriod([]);
+  const reportPeriod = resolveReportPeriod(options.months ?? [], options.years ?? []);
   const spaTexts = await loadSpaTextsForContacts(loadedContactIds, reportPeriod);
 
   // Загружаем мероприятия за выбранный период

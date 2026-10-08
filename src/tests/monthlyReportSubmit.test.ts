@@ -5,6 +5,8 @@ import {
   buildMonthlyReportSpaDetailsPath,
   buildMonthlyReportSpaFields,
   formatReportCreatedDate,
+  formatReportPeriodDate,
+  pickDefaultCategoryId,
   resolveReportPeriod,
   spaItemMatchesReportPeriod,
 } from '../features/crm/functions/monthlyReportSubmit';
@@ -81,8 +83,8 @@ describe('monthlyReportSubmit', () => {
   it('by default puts only current-month touches into spa fields', () => {
     const period = resolveReportPeriod([], [], new Date('2026-08-27T12:00:00'));
     const fields = buildMonthlyReportSpaFields(row, period);
-    expect(fields[MONTHLY_REPORT_SPA_FIELDS.touches]).toEqual(['8']);
-    expect(fields[MONTHLY_REPORT_SPA_FIELDS.touches]).not.toContain('99');
+    expect(fields[MONTHLY_REPORT_SPA_FIELDS.touches]).toEqual([8]);
+    expect(fields[MONTHLY_REPORT_SPA_FIELDS.touches]).not.toContain(99);
   });
 
   it('builds spa fields from table row for selected month', () => {
@@ -92,9 +94,12 @@ describe('monthlyReportSubmit', () => {
     expect(fields.title).toContain('Игорь Баранов');
     expect(fields.title).toContain('08.2026');
     expect(fields.contactId).toBe(32610);
+    expect(fields.contactIds).toEqual([32610]);
+    expect(fields.parentId3).toBe(32610);
+    expect(fields.categoryId).toBeUndefined();
     expect(fields.assignedById).toBe(1614);
     expect(fields.companyId).toBe(100);
-    expect(fields[MONTHLY_REPORT_SPA_FIELDS.touches]).toEqual(['8']);
+    expect(fields[MONTHLY_REPORT_SPA_FIELDS.touches]).toEqual([8]);
     expect(fields[MONTHLY_REPORT_SPA_FIELDS.comment]).toBe('Комментарий из таблицы');
     expect(fields[MONTHLY_REPORT_SPA_FIELDS.nextStep]).toBe('Следующий шаг');
     expect(fields[MONTHLY_REPORT_SPA_FIELDS.reportDate]).toBe(formatReportCreatedDate());
@@ -102,8 +107,23 @@ describe('monthlyReportSubmit', () => {
     expect(buildMonthlyReportSpaDetailsPath(12)).toBe('/crm/type/1258/details/12/');
   });
 
-  it('uses current calendar date as report created date', () => {
-    expect(formatReportCreatedDate(new Date('2026-08-27T15:30:00'))).toBe('2026-08-27');
+  it('stores current calendar day as report date', () => {
+    expect(formatReportCreatedDate(new Date('2026-10-08T15:30:00'))).toBe('2026-10-08');
+    const fields = buildMonthlyReportSpaFields(row, { month: 8, year: '2026' });
+    expect(fields[MONTHLY_REPORT_SPA_FIELDS.reportDate]).toBe(formatReportCreatedDate());
+    expect(formatReportPeriodDate({ month: 8, year: '2026' })).toBe('2026-08-01');
+  });
+
+  it('picks default spa funnel instead of categoryId 0', () => {
+    expect(pickDefaultCategoryId([])).toBeNull();
+    expect(pickDefaultCategoryId([
+      { id: 22, isDefault: 'N', sort: 100 },
+      { id: 18, isDefault: 'Y', sort: 200 },
+    ])).toBe(18);
+    expect(pickDefaultCategoryId([
+      { id: 31, isDefault: 'N', sort: 20 },
+      { id: 40, isDefault: 'N', sort: 10 },
+    ])).toBe(40);
   });
 
   it('matches spa item to report period by reportDate', () => {
