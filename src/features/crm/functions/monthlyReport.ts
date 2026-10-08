@@ -32,7 +32,7 @@ import {
 } from './monthlyTasks';
 import { buildAgreementListPath, loadAgreementInfoForContacts } from './monthlyAgreement';
 import {
-  loadSpaCommentsForContacts,
+  loadSpaTextsForContacts,
   resolveReportPeriod,
 } from './monthlyReportSubmit';
 import {
@@ -554,10 +554,10 @@ export async function loadMonthlyReportData(
     .filter(Boolean);
   const companyTitles = await loadCompanyTitles(companyIds);
 
-  // Загружаем комментарии из SPA-отчетов за текущий период
+  // Комментарий и следующий шаг из SPA-отчётов за текущий период
   const loadedContactIds = contacts.map((contact) => String(contact.ID ?? '')).filter(Boolean);
   const reportPeriod = resolveReportPeriod([]);
-  const spaComments = await loadSpaCommentsForContacts(loadedContactIds, reportPeriod);
+  const spaTexts = await loadSpaTextsForContacts(loadedContactIds, reportPeriod);
 
   // Загружаем мероприятия за выбранный период
   const eventsPeriod = resolveTouchesPeriod(options.months ?? [], options.years ?? []);
@@ -597,15 +597,15 @@ export async function loadMonthlyReportData(
       });
 
       if (mapped) {
-        // Добавляем комментарий из SPA-отчета
         const contactId = String(contact.ID ?? '');
-        const spaComment = spaComments.get(contactId);
+        const spaText = spaTexts.get(contactId);
         const contactEvents = eventsByContact.get(contactId) ?? [];
         const agreementInfo = agreementsByContact.get(contactId) || null;
         
         const result = {
           ...mapped,
-          comment: spaComment || mapped.comment,
+          comment: spaText?.comment || mapped.comment,
+          nextStep: spaText?.nextStep || mapped.nextStep,
           events: contactEvents.map((ev) => ({
             id: ev.id,
             title: ev.title,
@@ -643,29 +643,15 @@ export async function loadMonthlyReportData(
         nosologyMeta,
       });
 
-      // Добавляем комментарий из SPA-отчета
-      const spaComment = spaComments.get(id);
+      const spaText = spaTexts.get(id);
       const contactEvents = eventsByContact.get(id) ?? [];
       const agreementInfo = agreementsByContact.get(id) || null;
-      
-      if (spaComment && mappedForced) {
-        return {
-          ...mappedForced,
-          comment: spaComment,
-          events: contactEvents.map((ev) => ({
-            id: ev.id,
-            title: ev.title,
-            startDate: ev.startDate,
-            endDate: ev.endDate,
-          })),
-          agreementInfo,
-          agreementId: agreementInfo?.id ?? '',
-        };
-      }
       
       if (mappedForced) {
         return {
           ...mappedForced,
+          comment: spaText?.comment || mappedForced.comment,
+          nextStep: spaText?.nextStep || mappedForced.nextStep,
           events: contactEvents.map((ev) => ({
             id: ev.id,
             title: ev.title,

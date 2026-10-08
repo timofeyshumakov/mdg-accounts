@@ -4,6 +4,7 @@ import {
   MONTHLY_REPORT_SPA_FIELDS,
   buildMonthlyReportSpaDetailsPath,
   buildMonthlyReportSpaFields,
+  formatReportCreatedDate,
   resolveReportPeriod,
   spaItemMatchesReportPeriod,
 } from '../features/crm/functions/monthlyReportSubmit';
@@ -96,9 +97,13 @@ describe('monthlyReportSubmit', () => {
     expect(fields[MONTHLY_REPORT_SPA_FIELDS.touches]).toEqual(['8']);
     expect(fields[MONTHLY_REPORT_SPA_FIELDS.comment]).toBe('Комментарий из таблицы');
     expect(fields[MONTHLY_REPORT_SPA_FIELDS.nextStep]).toBe('Следующий шаг');
-    expect(fields[MONTHLY_REPORT_SPA_FIELDS.reportDate]).toBe('2026-08-01');
+    expect(fields[MONTHLY_REPORT_SPA_FIELDS.reportDate]).toBe(formatReportCreatedDate());
     expect(fields[MONTHLY_REPORT_SPA_FIELDS.currentStatus]).toBe('Готов участвовать');
     expect(buildMonthlyReportSpaDetailsPath(12)).toBe('/crm/type/1258/details/12/');
+  });
+
+  it('uses current calendar date as report created date', () => {
+    expect(formatReportCreatedDate(new Date('2026-08-27T15:30:00'))).toBe('2026-08-27');
   });
 
   it('matches spa item to report period by reportDate', () => {
@@ -108,6 +113,10 @@ describe('monthlyReportSubmit', () => {
     )).toBe(true);
     expect(spaItemMatchesReportPeriod(
       { contactId: 1, [MONTHLY_REPORT_SPA_FIELDS.reportDate]: '2026-08-01T00:00:00' },
+      { month: 8, year: '2026' },
+    )).toBe(true);
+    expect(spaItemMatchesReportPeriod(
+      { contactId: 1, [MONTHLY_REPORT_SPA_FIELDS.reportDate]: '2026-08-27' },
       { month: 8, year: '2026' },
     )).toBe(true);
     expect(spaItemMatchesReportPeriod(

@@ -100,7 +100,9 @@ describe('partnersPotentialChart', () => {
 
     expect(path.startsWith('/page/meropriyatiya/baoqgd/type/1052/list/?')).toBe(true);
     expect(query.get('apply_filter')).toBe('Y');
-    expect(query.get('CONTACT_ID')).toBe('{"CONTACT":[42]}');
+    expect(query.get('CONTACT_ID')).toBe('42');
     expect(query.get('CONTACT_ID_label')).toBe('Иванов И.И.');
+    expect(query.get('STAGE_SEMANTIC_ID')).toBe('P');
+    expect(query.get('STAGE_SEMANTIC_ID_label')).toBe('В работе');
   });
 });

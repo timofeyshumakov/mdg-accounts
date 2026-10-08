@@ -21,6 +21,34 @@ export const OUR_EVENTS_ENTITY_TYPE_ID = 1052;
 
 export const OUR_EVENTS_TYPE_TITLE = 'мероприятия';
 
+/**
+ * Группа стадий «В работе» (Bitrix stage semantic).
+ * P = process, S = success, F = fail.
+ */
+export const OUR_EVENTS_STAGE_SEMANTIC_IN_PROGRESS = 'P';
+
+/** REST/list-фильтр: только стадии «В работе». */
+export function buildOurEventsInProgressFilter(
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    stageSemanticId: OUR_EVENTS_STAGE_SEMANTIC_IN_PROGRESS,
+    ...extra,
+  };
+}
+
+export function isOurEventInProgress(item: Record<string, unknown>): boolean {
+  const semantic = String(
+    item.stageSemanticId
+    ?? item.STAGE_SEMANTIC_ID
+    ?? item.stageSemantic
+    ?? '',
+  ).trim().toUpperCase();
+
+  // P / PROCESS — «В работе»
+  return semantic === OUR_EVENTS_STAGE_SEMANTIC_IN_PROGRESS || semantic === 'PROCESS';
+}
+
 let cachedEntityTypeId: number | null = null;
 
 export function findOurEventsEntityTypeId(

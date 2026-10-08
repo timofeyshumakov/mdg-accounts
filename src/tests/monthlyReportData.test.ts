@@ -18,6 +18,15 @@ const sampleRows: MonthlyReportRow[] = [
     relationStatusId: 'new',
     interest: 'Региональный лидер',
     agreementLink: '#',
+    agreementInfo: {
+      id: 'a1',
+      createdTime: '01.01.2026',
+      source: '',
+      interest: '',
+      currentStatus: 'В работе',
+      currentStatusId: 'agr-work',
+    },
+    agreementId: 'a1',
     ourEventsLink: '#',
     competitorEventsLink: '#',
     calls: 1,
@@ -37,6 +46,7 @@ const sampleRows: MonthlyReportRow[] = [
     assignedId: '10',
     month: 8,
     year: '2026',
+    events: [],
   },
   {
     id: '2',
@@ -48,6 +58,8 @@ const sampleRows: MonthlyReportRow[] = [
     relationStatusId: 'good',
     interest: '',
     agreementLink: '#',
+    agreementInfo: null,
+    agreementId: '',
     ourEventsLink: '#',
     competitorEventsLink: '#',
     calls: 0,
@@ -67,6 +79,7 @@ const sampleRows: MonthlyReportRow[] = [
     assignedId: '11',
     month: 8,
     year: '2026',
+    events: [],
   },
 ];
 
@@ -85,10 +98,49 @@ describe('monthlyReportData', () => {
       partnerTypes: ['new'],
       relationStatuses: [],
       currentStatuses: [],
+      newCurrentStatuses: [],
     });
 
     expect(rows).toHaveLength(1);
     expect(rows[0].partnerName).toContain('Иванов');
+  });
+
+  it('keeps actual and new current status filters independent', () => {
+    const byActualStatus = filterMonthlyReportRows(sampleRows, {
+      search: '',
+      assignedIds: [],
+      months: [],
+      years: [],
+      partnerTypes: [],
+      relationStatuses: [],
+      currentStatuses: ['ready'],
+      newCurrentStatuses: [],
+    });
+    expect(byActualStatus.map((row) => row.id)).toEqual(['1', '2']);
+
+    const byNewStatus = filterMonthlyReportRows(sampleRows, {
+      search: '',
+      assignedIds: [],
+      months: [],
+      years: [],
+      partnerTypes: [],
+      relationStatuses: [],
+      currentStatuses: [],
+      newCurrentStatuses: ['agr-work'],
+    });
+    expect(byNewStatus.map((row) => row.id)).toEqual(['1', '2']);
+
+    const both = filterMonthlyReportRows(sampleRows, {
+      search: '',
+      assignedIds: [],
+      months: [],
+      years: [],
+      partnerTypes: [],
+      relationStatuses: [],
+      currentStatuses: ['ready'],
+      newCurrentStatuses: ['other'],
+    });
+    expect(both.map((row) => row.id)).toEqual(['2']);
   });
 
   it('recounts partner type chips from rows', () => {
@@ -106,6 +158,7 @@ describe('monthlyReportData', () => {
       partnerTypes: ['active'],
       relationStatuses: [],
       currentStatuses: [],
+      newCurrentStatuses: [],
     };
     const filtered = filterMonthlyReportRowsForChipCounts(sampleRows, params, 'partnerTypes');
     const chips = recountChips(filtered, partnerTypeChips, 'partnerTypeId');

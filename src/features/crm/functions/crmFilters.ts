@@ -453,6 +453,8 @@ export function buildDashboardEventSelect(): string[] {
   return [
     'id',
     'title',
+    'stageId',
+    'stageSemanticId',
     EVENT_PARTNER_FIELD,
     'CONTACT_ID',
     EVENT_ASSIGNED_FIELD,
@@ -465,7 +467,10 @@ export function buildDashboardEventSelect(): string[] {
   ];
 }
 
-async function fetchSpaEvents(entityTypeId: number): Promise<Record<string, unknown>[]> {
+async function fetchSpaEvents(
+  entityTypeId: number,
+  filter: Record<string, unknown> = {},
+): Promise<Record<string, unknown>[]> {
   const select = buildDashboardEventSelect();
   const attempts: Array<{ select?: string[]; useOriginalUfNames: 'Y' | 'N' }> = [
     { select, useOriginalUfNames: 'N' },
@@ -478,7 +483,7 @@ async function fetchSpaEvents(entityTypeId: number): Promise<Record<string, unkn
     const events = await fetchAllCrmItems(
       entityTypeId,
       attempt.select,
-      {},
+      filter,
       { useOriginalUfNames: attempt.useOriginalUfNames },
     );
 
@@ -492,6 +497,8 @@ async function fetchSpaEvents(entityTypeId: number): Promise<Record<string, unkn
 
 export async function loadOurEventsRaw(): Promise<Record<string, unknown>[]> {
   const entityTypeId = await getOurEventsEntityTypeId();
+  // Данные дашборда/«комм. потенциал» — все мероприятия;
+  // фильтр «В работе» только в URL списка Bitrix.
   return fetchSpaEvents(entityTypeId);
 }
 

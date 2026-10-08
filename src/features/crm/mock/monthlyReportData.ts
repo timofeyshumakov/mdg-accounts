@@ -36,6 +36,7 @@ export interface MonthlyReportRow {
     source: string;
     interest: string;
     currentStatus: string;
+    currentStatusId?: string;
   } | null;
   agreementId: string;
   ourEventsLink: string;
@@ -97,6 +98,10 @@ export function hasTouchesInPeriod(
   });
 }
 
+export function getAgreementCurrentStatusId(row: MonthlyReportRow): string {
+  return String(row.agreementInfo?.currentStatusId ?? '').trim();
+}
+
 export function filterMonthlyReportRows(
   rows: MonthlyReportRow[],
   params: {
@@ -107,6 +112,8 @@ export function filterMonthlyReportRows(
     partnerTypes: string[];
     relationStatuses: string[];
     currentStatuses: string[];
+    /** Текущий статус из договорённости — только для новых партнёров. */
+    newCurrentStatuses?: string[];
     onlyNoTouches?: boolean;
     onlyNoNextStep?: boolean;
     onlyNoReport?: boolean;
@@ -114,6 +121,7 @@ export function filterMonthlyReportRows(
   },
 ): MonthlyReportRow[] {
   const search = params.search.trim().toLowerCase();
+  const newCurrentStatuses = params.newCurrentStatuses ?? [];
 
   return rows.filter((row) => {
     if (params.assignedIds.length && !params.assignedIds.includes(row.assignedId)) {
@@ -128,11 +136,23 @@ export function filterMonthlyReportRows(
     if (params.partnerTypes.length && !params.partnerTypes.includes(row.partnerTypeId)) {
       return false;
     }
-    if (params.relationStatuses.length && !params.relationStatuses.includes(row.relationStatusId)) {
-      return false;
+    // Статус отношений — фильтр блока «Актуальные»
+    if (params.relationStatuses.length && row.partnerTypeId === 'active') {
+      if (!params.relationStatuses.includes(row.relationStatusId)) {
+        return false;
+      }
     }
-    if (params.currentStatuses.length && !params.currentStatuses.includes(row.currentStatusId)) {
-      return false;
+    // Текущий статус контакта — фильтр блока «Актуальные»
+    if (params.currentStatuses.length && row.partnerTypeId === 'active') {
+      if (!params.currentStatuses.includes(row.currentStatusId)) {
+        return false;
+      }
+    }
+    // Текущий статус договорённости — фильтр блока «Новые»
+    if (newCurrentStatuses.length && row.partnerTypeId === 'new') {
+      if (!newCurrentStatuses.includes(getAgreementCurrentStatusId(row))) {
+        return false;
+      }
     }
     if (params.onlyNoTouches && hasTouchesInPeriod(row, params.months, params.years)) {
       return false;
@@ -161,28 +181,35 @@ export type MonthlyReportListFilterParams = {
   partnerTypes: string[];
   relationStatuses: string[];
   currentStatuses: string[];
+  newCurrentStatuses: string[];
 };
 
 export function filterMonthlyReportRowsForChipCounts(
   rows: MonthlyReportRow[],
   params: MonthlyReportListFilterParams,
-  exclude: 'partnerTypes' | 'relationStatuses' | 'currentStatuses',
+  exclude: 'partnerTypes' | 'relationStatuses' | 'currentStatuses' | 'newCurrentStatuses',
 ): MonthlyReportRow[] {
   return filterMonthlyReportRows(rows, {
     ...params,
     partnerTypes: exclude === 'partnerTypes' ? [] : params.partnerTypes,
     relationStatuses: exclude === 'relationStatuses' ? [] : params.relationStatuses,
     currentStatuses: exclude === 'currentStatuses' ? [] : params.currentStatuses,
+    newCurrentStatuses: exclude === 'newCurrentStatuses' ? [] : params.newCurrentStatuses,
   });
 }
 
 export function recountChips(
   rows: MonthlyReportRow[],
   chips: MonthlyChipOption[],
-  field: 'partnerTypeId' | 'relationStatusId' | 'currentStatusId',
+  field: 'partnerTypeId' | 'relationStatusId' | 'currentStatusId' | 'agreementCurrentStatusId',
 ): MonthlyChipOption[] {
   return chips.map((chip) => ({
     ...chip,
-    count: rows.filter((row) => row[field] === chip.id).length,
+    count: rows.filter((row) => {
+      if (field === 'agreementCurrentStatusId') {
+        return getAgreementCurrentStatusId(row) === chip.id;
+      }
+      return row[field] === chip.id;
+    }).length,
   }));
 }

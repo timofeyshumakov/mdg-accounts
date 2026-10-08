@@ -155,8 +155,8 @@
                 :key="chip.id"
                 type="button"
                 class="monthly-chip"
-                :class="{ 'monthly-chip--active': selectedCurrentStatuses.includes(chip.id) }"
-                @click="toggleCurrentStatus(chip.id)"
+                :class="{ 'monthly-chip--active': selectedNewCurrentStatuses.includes(chip.id) }"
+                @click="toggleNewCurrentStatus(chip.id)"
               >
                 <span class="monthly-chip__label">{{ chip.label }}</span>
                 <span class="monthly-chip__count">{{ chip.count }}</span>
@@ -891,6 +891,7 @@ const selectedMonths = ref<number[]>([]);
 const selectedYears = ref<string[]>([]);
 const selectedRelationStatuses = ref<string[]>([]);
 const selectedCurrentStatuses = ref<string[]>([]);
+const selectedNewCurrentStatuses = ref<string[]>([]);
 
 const touchesDialogOpen = ref(false);
 const touchesDialogPartner = ref('');
@@ -986,6 +987,7 @@ const listFilterParams = computed(() => ({
   partnerTypes: [] as string[],
   relationStatuses: selectedRelationStatuses.value,
   currentStatuses: selectedCurrentStatuses.value,
+  newCurrentStatuses: selectedNewCurrentStatuses.value,
 }));
 
 const baseFilteredRows = computed(() => filterMonthlyReportRows(rows.value, listFilterParams.value));
@@ -1088,12 +1090,16 @@ const actualCurrentStatusChips = computed(() =>
 
 const newCurrentStatusChips = computed(() => {
   const options = newCurrentStatusOptions.value.length > 0
-    ? newCurrentStatusOptions.value
+    ? newCurrentStatusOptions.value.map((option) => ({
+      id: option.id,
+      label: option.title,
+      count: 0,
+    }))
     : currentStatusChipDefs.value;
   return recountChips(
-    filterMonthlyReportRowsForChipCounts(newRows.value, listFilterParams.value, 'currentStatuses'),
+    filterMonthlyReportRowsForChipCounts(newRows.value, listFilterParams.value, 'newCurrentStatuses'),
     options,
-    'currentStatusId',
+    'agreementCurrentStatusId',
   );
 });
 
@@ -1190,6 +1196,10 @@ function toggleRelationStatus(id: string) {
 
 function toggleCurrentStatus(id: string) {
   toggleChipList(selectedCurrentStatuses, id);
+}
+
+function toggleNewCurrentStatus(id: string) {
+  toggleChipList(selectedNewCurrentStatuses, id);
 }
 
 function isAllSelected(

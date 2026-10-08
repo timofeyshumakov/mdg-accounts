@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildOurEventsListPath, NAV_EXTERNAL_PATHS } from '../features/crm/functions/crmNavigation';
+import { OUR_EVENTS_STAGE_SEMANTIC_IN_PROGRESS } from '../features/crm/functions/ourEventsMetric';
 
 describe('crmNavigation', () => {
   it('defines external navigation paths', () => {
@@ -13,7 +14,20 @@ describe('crmNavigation', () => {
     );
   });
 
-  it('builds our events list path in custom section', () => {
-    expect(buildOurEventsListPath(1052)).toBe('/page/meropriyatiya/baoqgd/type/1052/list/');
+  it('builds our events list path with in-progress stage group filter', () => {
+    const path = buildOurEventsListPath(1052);
+    const [base, queryString = ''] = path.split('?');
+    const query = new URLSearchParams(queryString);
+
+    expect(base).toBe('/page/meropriyatiya/baoqgd/type/1052/list/');
+    expect(query.get('apply_filter')).toBe('Y');
+    expect(query.get('STAGE_SEMANTIC_ID')).toBe(OUR_EVENTS_STAGE_SEMANTIC_IN_PROGRESS);
+    expect(query.get('STAGE_SEMANTIC_ID_label')).toBe('В работе');
+  });
+
+  it('can build our events list path without stage filter', () => {
+    expect(buildOurEventsListPath(1052, { inProgressOnly: false })).toBe(
+      '/page/meropriyatiya/baoqgd/type/1052/list/',
+    );
   });
 });

@@ -10,7 +10,10 @@ import {
 } from './bitrixFields';
 import { openBitrixPath } from './bitrixPath';
 import { appendCrmContactListFilter } from './bitrixListFilter';
-import { buildOurEventsListPath } from './crmNavigation';
+import {
+  appendOurEventsInProgressStageFilter,
+  buildOurEventsListPath,
+} from './crmNavigation';
 import { OUR_EVENTS_ENTITY_TYPE_ID, getOurEventsEntityTypeId } from './ourEventsMetric';
 
 /** Партнёр мероприятия — стандартное поле «Контакт». */
@@ -213,7 +216,10 @@ export function buildPartnerEventsListPath(
     partnerLabel,
   );
 
-  return `${buildOurEventsListPath(entityTypeId)}?${params.toString()}`;
+  const listBase = buildOurEventsListPath(entityTypeId, { inProgressOnly: false });
+  appendOurEventsInProgressStageFilter(params);
+
+  return `${listBase}?${params.toString()}`;
 }
 
 export async function openPartnerEventsList(

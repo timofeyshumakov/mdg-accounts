@@ -60,8 +60,17 @@ export function resolveReportPeriod(
   return current;
 }
 
+/** Дата периода для сопоставления (1-е число месяца) — фильтры/поиск. */
 export function formatReportPeriodDate(period: MonthlyReportPeriod): string {
   return `${period.year}-${String(period.month).padStart(2, '0')}-01`;
+}
+
+/** Дата создания элемента отчёта — текущий календарный день. */
+export function formatReportCreatedDate(now: Date = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function formatReportPeriodLabel(period: MonthlyReportPeriod): string {
@@ -121,7 +130,7 @@ export function buildMonthlyReportSpaFields(
     [MONTHLY_REPORT_SPA_FIELDS.events]: periodEvents,
     [MONTHLY_REPORT_SPA_FIELDS.comment]: row.comment ?? '',
     [MONTHLY_REPORT_SPA_FIELDS.nextStep]: row.nextStep ?? '',
-    [MONTHLY_REPORT_SPA_FIELDS.reportDate]: formatReportPeriodDate(period),
+    [MONTHLY_REPORT_SPA_FIELDS.reportDate]: formatReportCreatedDate(),
     [MONTHLY_REPORT_SPA_FIELDS.currentStatus]: row.currentStatus ?? '',
   };
 
@@ -270,15 +279,80 @@ export async function createMonthlyReportSpaItem(
   return { id };
 }
 
-/** Загрузка комментариев из SPA-отчетов для контактов за указанный период. */
-export async function loadSpaCommentsForContacts(
+export type SpaReportTexts = {
+  comment: string;
+  nextStep: string;
+};
+
+function spaFieldVariants(field: string): string[] {
+  return [
+    field,
+    field.replace('ufCrm', 'UF_CRM_'),
+    field.replace('UF_CRM_', 'ufCrm'),
+  ];
+}
+
+function readSpaTextField(item: Record<string, unknown>, field: string): string {
+  for (const key of spaFieldVariants(field)) {
+    const value = firstScalar(item[key]);
+    if (value) {
+      return value;
+    }
+  }
+  return '';
+}
+
+async function fetchSpaItemsForPeriod(
+  select: string[],
+  period: MonthlyReportPeriod,
+): Promise<Record<string, unknown>[]> {
+  const periodStart = formatReportPeriodDate(period);
+  let items: Record<string, unknown>[] = [];
+
+  try {
+    items = await fetchAllCrmItems(
+      MONTHLY_REPORT_SPA_ENTITY_TYPE_ID,
+      select,
+      { [MONTHLY_REPORT_SPA_FIELDS.reportDate]: periodStart },
+    );
+  } catch {
+    items = [];
+  }
+
+  // Отчёты с датой создания «сегодня» (не 01) — добираем без жёсткого фильтра по дню
+  if (!items.length) {
+    try {
+      items = await fetchAllCrmItems(
+        MONTHLY_REPORT_SPA_ENTITY_TYPE_ID,
+        select,
+        { [MONTHLY_REPORT_SPA_FIELDS.reportDateUpper]: periodStart },
+      );
+    } catch {
+      items = [];
+    }
+  }
+
+  if (!items.length) {
+    try {
+      items = await fetchAllCrmItems(MONTHLY_REPORT_SPA_ENTITY_TYPE_ID, select, {});
+    } catch {
+      items = [];
+    }
+  }
+
+  return items.filter((item) => spaItemMatchesReportPeriod(item, period));
+}
+
+/** Загрузка комментария и следующего шага из SPA-отчётов за период. */
+export async function loadSpaTextsForContacts(
   contactIds: string[],
   period: MonthlyReportPeriod,
-): Promise<Map<string, string>> {
-  const commentMap = new Map<string, string>();
+): Promise<Map<string, SpaReportTexts>> {
+  const textMap = new Map<string, SpaReportTexts>();
+  const contactSet = new Set(contactIds.map(String).filter(Boolean));
 
-  if (!contactIds.length) {
-    return commentMap;
+  if (!contactSet.size) {
+    return textMap;
   }
 
   const select = [
@@ -286,34 +360,48 @@ export async function loadSpaCommentsForContacts(
     'contactId',
     'CONTACT_ID',
     MONTHLY_REPORT_SPA_FIELDS.comment,
+    MONTHLY_REPORT_SPA_FIELDS.nextStep,
     MONTHLY_REPORT_SPA_FIELDS.reportDate,
     MONTHLY_REPORT_SPA_FIELDS.reportDateUpper,
   ];
 
   try {
-    const items = await fetchAllCrmItems(
-      MONTHLY_REPORT_SPA_ENTITY_TYPE_ID,
-      select,
-      { [MONTHLY_REPORT_SPA_FIELDS.reportDate]: formatReportPeriodDate(period) },
-    );
+    const items = await fetchSpaItemsForPeriod(select, period);
 
     items.forEach((item) => {
-      if (!spaItemMatchesReportPeriod(item, period)) {
+      const contactId = extractContactIdFromSpaItem(item);
+      if (!contactId || !contactSet.has(contactId)) {
         return;
       }
 
-      const contactId = extractContactIdFromSpaItem(item);
-      const comment = firstScalar(item[MONTHLY_REPORT_SPA_FIELDS.comment]
-        ?? item[MONTHLY_REPORT_SPA_FIELDS.comment?.replace('ufCrm', 'UF_CRM_') ?? '']);
-
-      if (contactId && comment) {
-        commentMap.set(contactId, comment);
+      const comment = readSpaTextField(item, MONTHLY_REPORT_SPA_FIELDS.comment);
+      const nextStep = readSpaTextField(item, MONTHLY_REPORT_SPA_FIELDS.nextStep);
+      if (!comment && !nextStep) {
+        return;
       }
+
+      // Более свежий элемент периода перезапишет предыдущий
+      textMap.set(contactId, { comment, nextStep });
     });
   } catch (error) {
-    console.warn('Не удалось загрузить комментарии из SPA-отчетов:', error);
+    console.warn('Не удалось загрузить тексты из SPA-отчетов:', error);
   }
 
+  return textMap;
+}
+
+/** @deprecated используйте loadSpaTextsForContacts */
+export async function loadSpaCommentsForContacts(
+  contactIds: string[],
+  period: MonthlyReportPeriod,
+): Promise<Map<string, string>> {
+  const texts = await loadSpaTextsForContacts(contactIds, period);
+  const commentMap = new Map<string, string>();
+  texts.forEach((value, contactId) => {
+    if (value.comment) {
+      commentMap.set(contactId, value.comment);
+    }
+  });
   return commentMap;
 }
 
