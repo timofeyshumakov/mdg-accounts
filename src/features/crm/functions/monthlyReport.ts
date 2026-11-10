@@ -147,7 +147,7 @@ export function resolveActivePartnerTypeIds(types: ContactTypeStatus[]): string[
 }
 
 export function resolvePotentialPartnerTypeIds(types: ContactTypeStatus[]): string[] {
-  const ids = ['PARTNER'];
+  const ids = ['PARTNER', 'SUPPLIER'];
 
   types.forEach((type) => {
     const name = normalizeName(type.NAME ?? '');

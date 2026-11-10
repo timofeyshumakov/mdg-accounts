@@ -21,7 +21,7 @@
             variant="flat"
             class="report-header__btn report-header__btn--outlined"
             :loading="isLoading"
-            @click="loadDashboardData"
+            @click="refreshAll"
           >
             <template #prepend>
               <v-icon icon="$refresh" />
@@ -75,6 +75,10 @@
           :assigned-options="assignedOptions"
         />
 
+        <TasksNewPage v-else-if="activeNavId === 'tasks-new'" ref="tasksPageRef" />
+
+        <OurEventsNewPage v-else-if="activeNavId === 'our-events-new'" ref="eventsPageRef" />
+
         <section v-else class="crm-placeholder">
           <p>Раздел «{{ activeNavTitle }}» — в разработке</p>
         </section>
@@ -92,6 +96,8 @@ import CrmSummaryCards from './components/CrmSummaryCards.vue';
 import CrmChartsPanel from './components/CrmChartsPanel.vue';
 import CrmFiltersPanel from './components/CrmFiltersPanel.vue';
 import MonthlyReportPage from './components/MonthlyReportPage.vue';
+import TasksNewPage from './components/TasksNewPage.vue';
+import OurEventsNewPage from './components/OurEventsNewPage.vue';
 import {
   navGroups,
   navItems,
@@ -230,6 +236,26 @@ watch(filters, () => {
   void recomputeDashboard();
 }, { deep: true });
 
+/** Ссылки на вкладки с собственной загрузкой данных. */
+const tasksPageRef = ref<{ reload?: () => Promise<void> } | null>(null);
+const eventsPageRef = ref<{ reload?: () => Promise<void> } | null>(null);
+
+/**
+ * Кнопка «Обновить»: перезагружает дашборд и активную вкладку
+ * «Задачи (NEW)» / «Наши мероприятия (NEW)», если она открыта.
+ */
+async function refreshAll() {
+  await loadDashboardData();
+  const activePage = activeNavId.value === 'tasks-new'
+    ? tasksPageRef.value
+    : activeNavId.value === 'our-events-new'
+      ? eventsPageRef.value
+      : null;
+  if (typeof activePage?.reload === 'function') {
+    await activePage.reload();
+  }
+}
+
 async function loadDashboardData() {
   isLoading.value = true;
   loadingProgress.value = 0;
@@ -287,7 +313,11 @@ async function loadDashboardData() {
 }
 
 function onNavigate(item: NavItem) {
-  if (item.id === 'crm' || item.id === 'monthly-report') {
+  // Внутренние разделы не уходят в Bitrix — показываем страницу внутри приложения.
+  if (item.id === 'crm'
+    || item.id === 'monthly-report'
+    || item.id === 'tasks-new'
+    || item.id === 'our-events-new') {
     activeNavId.value = item.id;
     return;
   }

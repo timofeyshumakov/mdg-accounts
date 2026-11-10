@@ -321,8 +321,8 @@
     font-size: 0.75rem
 
   .filter-icon
-    width: 1.25rem
-    height: 1.25rem
+    width: 1.5rem
+    height: 1.5rem
     object-fit: contain
 
 .crm-charts
@@ -392,6 +392,831 @@
   .crm-filters__grid
     grid-template-columns: 1fr
 
+.events-new
+  display: flex
+  flex-direction: column
+  gap: 1rem
+  flex: 1 1 auto
+  min-height: 0
+
+  &__filter-card
+    padding: 1rem 1.15rem
+    margin-bottom: 0
+
+    .filters
+      display: grid
+      grid-template-columns: repeat(3, minmax(0, 1fr))
+      gap: 0.85rem
+      margin-bottom: 0
+      align-items: start
+
+      > .filter-item
+        min-width: 0
+        max-width: 100%
+
+    .filter-item
+      display: flex
+      flex-direction: column
+      gap: 0.35rem
+
+      &--actions
+        justify-content: flex-end
+        align-items: flex-end
+        height: 100%
+
+      &--period
+        overflow: visible
+
+    .filter-label
+      display: block
+      font-size: 0.875rem
+      font-weight: 600
+      line-height: 1.2
+      color: #334155
+
+    .period-date-filter
+      width: 100%
+      max-width: 100%
+
+    .filters .v-field__prepend-inner .v-icon
+      color: #2563eb
+      opacity: 1
+
+    .filters .v-field__field
+      max-height: 4.25rem
+      overflow: hidden
+
+    .filters .v-field
+      border-radius: 0.5rem !important
+
+    .filters .v-field__outline,
+    .filters .v-field__overlay
+      border-radius: 0.5rem !important
+
+    .filters .v-field__input,
+    .filters .v-select__selection-text,
+    .filters .v-autocomplete__selection-text
+      color: #000000 !important
+
+    .filters .v-field__input::placeholder,
+    .filters input::placeholder
+      color: #000000 !important
+      opacity: 1 !important
+
+    .filters .v-chip
+      font-size: 0.75rem
+
+    .filter-icon
+      width: 1.5rem
+      height: 1.5rem
+      object-fit: contain
+
+  &__reset
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    height: 2.5rem
+    padding: 0.5rem 1rem
+    border: 1px solid #cbd5e1
+    border-radius: 0.5rem
+    background: #fff
+    color: #334155
+    font: inherit
+    font-size: 0.8125rem
+    font-weight: 600
+    cursor: pointer
+    transition: all 0.15s ease
+
+    &:hover
+      background: #f8fafc
+      border-color: #94a3b8
+      color: #1e293b
+
+  &__count
+    margin-left: 0.5rem
+    padding: 0.15rem 0.5rem
+    border-radius: 999px
+    background: #eef2f7
+    color: #475569
+    font-size: 0.75rem
+    font-weight: 700
+
+  &__table-title
+    display: flex
+    align-items: center
+    justify-content: space-between
+    width: 100%
+    gap: 1rem
+
+  &__table-title-main
+    display: flex
+    align-items: center
+
+  &__title
+    font-size: 0.875rem
+    font-weight: 600
+    text-align: left
+    word-break: break-word
+
+  /* Составной столбец: несколько строк в одной ячейке. */
+  &__stack
+    display: flex
+    flex-direction: column
+    gap: 0.3rem
+    min-width: 0
+    max-width: 22rem
+    text-align: left
+
+  /* Строка «Название: Значение» внутри ячейки. */
+  &__field
+    display: flex
+    flex-wrap: wrap
+    align-items: baseline
+    gap: 0 0.35rem
+    min-width: 0
+
+  &__field-label
+    flex: 0 0 auto
+    font-size: 0.75rem
+    color: #94a3b8
+    white-space: nowrap
+
+  /* Блок «подпись + список сотрудников с фото». */
+  &__field-block
+    display: flex
+    flex-direction: column
+    gap: 0.2rem
+    min-width: 0
+
+  &__people
+    display: flex
+    flex-direction: column
+    gap: 0.25rem
+    min-width: 0
+
+  /* % выполнения продаж + прогресс-бар сбора (как в detail-report). */
+  .percent-cell
+    display: flex
+    flex-direction: column
+    align-items: flex-start
+    gap: 0.25rem
+    width: 100%
+    min-width: 4.5rem
+
+  .percent-cell__value
+    font-weight: 700
+    font-size: 0.875rem
+    color: #1f2937
+    line-height: 1.2
+
+  .percent-cell__track
+    width: 100%
+    height: 8px
+    overflow: hidden
+    border-radius: 999px
+    background: #eef1f5
+
+  .percent-cell__fill
+    height: 100%
+    max-width: 100%
+    border-radius: inherit
+    transition: width 0.25s ease
+
+    &--red
+      background: #ef5350
+
+    &--orange
+      background: #fb8c00
+
+    &--green
+      background: #43a047
+
+  &__stack-row
+    display: flex
+    align-items: center
+    gap: 0.35rem
+    min-width: 0
+
+  &__stack-text
+    font-size: 0.8125rem
+    color: #1f2937
+    white-space: normal
+    overflow-wrap: break-word
+    line-height: 1.35
+
+  &__date
+    font-size: 0.8125rem
+    color: #1f2937
+    white-space: nowrap
+
+  &__client
+    font-size: 0.8125rem
+
+  &__empty
+    color: #cbd5e1
+
+.card-stage
+  display: inline-flex
+  align-items: center
+  padding: 0.2rem 0.6rem
+  border-radius: 0.4rem
+  background: #f1f5f9
+  color: #475569
+  font-size: 0.75rem
+  font-weight: 600
+  text-align: center
+  white-space: normal
+  line-height: 1.3
+
+.tasks-dashboard
+  display: flex
+  flex-direction: column
+  flex: 1 1 auto
+  min-height: 0
+
+.tasks-app
+  display: grid
+  grid-template-columns: 280px minmax(0, 1fr)
+  gap: 1.25rem
+  align-items: start
+  min-height: 0
+  width: 100%
+
+.tasks-badge
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  min-width: 1.5rem
+  height: 1.5rem
+  padding: 0 0.45rem
+  border-radius: 999px
+  background: #f0f3f8
+  color: #64748b
+  font-size: 0.75rem
+  font-weight: 700
+  line-height: 1
+
+.tasks-sidebar
+  padding: 0
+  overflow: hidden
+  position: sticky
+  top: 1rem
+
+  &__head
+    display: flex
+    align-items: center
+    justify-content: space-between
+    padding: 1.1rem 1.2rem 0.85rem
+    border-bottom: 1px solid #eef2f7
+
+  &__title
+    font-size: 1rem
+    font-weight: 700
+    color: #111827
+
+  &__nav-group
+    display: flex
+    flex-direction: column
+    gap: 0.25rem
+    padding: 0.65rem 0.65rem 0.85rem
+    border-bottom: 1px solid #eef2f7
+
+  &__search
+    padding: 0.75rem 0.65rem 0.25rem
+
+  &__section-label
+    padding: 0.75rem 1.1rem 0.45rem
+    font-size: 0.6875rem
+    font-weight: 700
+    letter-spacing: 0.08em
+    color: #94a3b8
+    text-transform: uppercase
+
+  &__partners
+    display: flex
+    flex-direction: column
+    gap: 0.2rem
+    padding: 0 0.65rem 0.85rem
+    max-height: calc(100vh - 16rem)
+    overflow-y: auto
+
+  &__empty
+    margin: 0
+    padding: 0.5rem 0.65rem
+    font-size: 0.8125rem
+    color: #94a3b8
+
+.tasks-sidebar-search
+  position: relative
+  display: flex
+  align-items: center
+  width: 100%
+
+  &__icon
+    position: absolute
+    left: 0.65rem
+    color: #94a3b8
+    pointer-events: none
+
+  input
+    width: 100%
+    padding: 0.45rem 1.8rem 0.45rem 2rem
+    border: 1px solid #e2e8f0
+    border-radius: 0.5rem
+    background: #f8fafc
+    color: #0f172a
+    font: inherit
+    font-size: 0.8125rem
+    outline: none
+    transition: all 0.15s ease
+
+    &::placeholder
+      color: #94a3b8
+
+    &:focus
+      background: #fff
+      border-color: #93c5fd
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1)
+
+  &__clear
+    position: absolute
+    right: 0.5rem
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    width: 1.25rem
+    height: 1.25rem
+    border: 0
+    border-radius: 50%
+    background: transparent
+    color: #94a3b8
+    font-size: 1rem
+    line-height: 1
+    cursor: pointer
+    padding: 0
+
+    &:hover
+      color: #475569
+      background: #e2e8f0
+
+.tasks-nav-btn
+  display: flex
+  align-items: center
+  justify-content: space-between
+  width: 100%
+  padding: 0.65rem 0.75rem
+  border: 0
+  border-radius: 0.55rem
+  background: transparent
+  color: #1f2937
+  font: inherit
+  font-size: 0.875rem
+  font-weight: 500
+  text-align: left
+  cursor: pointer
+  transition: all 0.15s ease
+
+  &:hover
+    background: #f8fafc
+
+  &--active
+    background: #eff6ff
+    color: #2563eb
+    font-weight: 600
+
+    .tasks-badge
+      background: #dbeafe
+      color: #1d4ed8
+
+.tasks-partner-btn
+  display: flex
+  flex-direction: column
+  align-items: flex-start
+  gap: 0.2rem
+  width: 100%
+  padding: 0.65rem 0.75rem
+  border: 0
+  border-left: 3px solid transparent
+  border-radius: 0.55rem
+  background: transparent
+  color: #1f2937
+  font: inherit
+  text-align: left
+  cursor: pointer
+  transition: all 0.15s ease
+
+  &:hover
+    background: #f8fafc
+
+  &--active
+    background: #eff6ff
+    border-left-color: #2563eb
+    box-shadow: inset 3px 0 #2563eb
+
+    .tasks-partner-btn__name
+      color: #1d4ed8
+      font-weight: 600
+
+  &__name
+    font-size: 0.875rem
+    color: #1f2937
+    line-height: 1.3
+
+  &__meta
+    font-size: 0.75rem
+    color: #94a3b8
+
+.tasks-content
+  display: flex
+  flex-direction: column
+  gap: 1.1rem
+  min-width: 0
+
+.tasks-topline
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 1rem
+
+  &__eyebrow
+    font-size: 0.6875rem
+    font-weight: 700
+    letter-spacing: 0.08em
+    text-transform: uppercase
+    color: #94a3b8
+
+  &__title
+    margin: 0.15rem 0 0
+    font-size: 1.5rem
+    font-weight: 800
+    color: #0f172a
+    letter-spacing: -0.02em
+
+.tasks-btn-primary
+  display: inline-flex
+  align-items: center
+  justify-content: center
+  padding: 0.65rem 1.15rem
+  border: 0
+  border-radius: 0.6rem
+  background: #2563eb
+  color: #fff
+  font: inherit
+  font-size: 0.875rem
+  font-weight: 600
+  cursor: pointer
+  transition: background 0.15s ease
+
+  &:hover
+    background: #1d4ed8
+
+  &:disabled
+    opacity: 0.6
+    cursor: default
+
+.tasks-global-tabs
+  display: grid
+  grid-template-columns: repeat(4, 1fr)
+  gap: 0.75rem
+
+.tasks-global-tab
+  display: flex
+  align-items: center
+  justify-content: space-between
+  padding: 0.9rem 1.1rem
+  border: 1px solid #eef2f7
+  border-radius: 0.75rem
+  background: #fff
+  color: #64748b
+  font: inherit
+  cursor: pointer
+  transition: all 0.15s ease
+
+  &:hover
+    border-color: #cbd5e1
+
+  &--active
+    border-color: #2563eb
+    background: #eff6ff
+    color: #2563eb
+
+    .tasks-global-tab__value
+      color: #2563eb
+
+  &__label
+    font-size: 0.875rem
+    font-weight: 600
+
+  &__value
+    font-size: 1.35rem
+    font-weight: 700
+    color: #0f172a
+
+    &--danger
+      color: #dc2626 !important
+
+.tasks-context-card
+  padding: 1.25rem 1.35rem
+
+  &__header
+    display: flex
+    align-items: flex-start
+    justify-content: space-between
+    gap: 1rem
+
+  &__title
+    margin: 0
+    font-size: 1.25rem
+    font-weight: 700
+    color: #0f172a
+    letter-spacing: -0.01em
+
+  &__subtitle
+    margin-top: 0.25rem
+    font-size: 0.8125rem
+    color: #64748b
+
+  &__total
+    font-size: 0.8125rem
+    color: #64748b
+    white-space: nowrap
+    padding-top: 0.2rem
+
+    b
+      font-size: 1.125rem
+      font-weight: 700
+      color: #0f172a
+      margin-right: 0.25rem
+
+.tasks-event-tabs
+  display: flex
+  gap: 0.65rem
+  flex-wrap: wrap
+  margin-top: 1.15rem
+
+.tasks-event-tab
+  display: flex
+  flex-direction: column
+  justify-content: space-between
+  gap: 0.5rem
+  min-height: 4.25rem
+  flex: 1 1 12rem
+  max-width: 22rem
+  padding: 0.75rem 0.85rem
+  border: 1px solid #e2e8f0
+  border-radius: 0.65rem
+  background: #f8fafc
+  color: #475569
+  font: inherit
+  text-align: left
+  cursor: pointer
+  transition: all 0.15s ease
+
+  &:hover
+    background: #eff6ff
+    border-color: #bfdbfe
+
+  &--simple
+    flex: 0 1 11.5rem
+
+  &--active
+    background: #2563eb
+    border-color: #2563eb
+    color: #fff
+
+    .tasks-event-tab__name
+      color: #fff
+
+    .tasks-event-tab__meta
+      color: rgba(255, 255, 255, 0.85)
+
+    &:hover
+      background: #1d4ed8
+      border-color: #1d4ed8
+
+  &__name
+    font-size: 0.8125rem
+    font-weight: 600
+    line-height: 1.35
+    color: #1e293b
+
+  &__meta
+    display: flex
+    align-items: center
+    justify-content: space-between
+    gap: 0.5rem
+    font-size: 0.75rem
+    color: #64748b
+
+.tasks-filter-card
+  padding: 0
+  overflow: hidden
+
+  &__row
+    display: flex
+    align-items: center
+    gap: 0.75rem
+    flex-wrap: wrap
+    padding: 0.9rem 1.1rem
+    border-bottom: 1px solid #eef2f7
+
+  &__label
+    font-size: 0.875rem
+    font-weight: 700
+    color: #0f172a
+    margin-right: 0.35rem
+
+  &__control
+    flex: 0 1 13rem
+    min-width: 11rem
+
+    .v-field
+      border-radius: 0.5rem !important
+
+  &__reset
+    margin-left: auto
+    border: 0
+    background: transparent
+    color: #2563eb
+    font: inherit
+    font-size: 0.8125rem
+    font-weight: 600
+    cursor: pointer
+    padding: 0.25rem 0.45rem
+
+    &:hover
+      text-decoration: underline
+
+  &__search-row
+    display: flex
+    align-items: center
+    gap: 0.75rem
+    padding: 0.85rem 1.1rem
+
+  &__results
+    margin-left: auto
+    font-size: 0.8125rem
+    color: #64748b
+    white-space: nowrap
+
+.tasks-search-input
+  position: relative
+  display: flex
+  align-items: center
+  width: 100%
+  max-width: 36rem
+
+  &__icon
+    position: absolute
+    left: 0.75rem
+    color: #94a3b8
+    pointer-events: none
+
+  input
+    width: 100%
+    padding: 0.6rem 0.85rem 0.6rem 2.25rem
+    border: 1px solid #e2e8f0
+    border-radius: 0.55rem
+    background: #f8fafc
+    color: #0f172a
+    font: inherit
+    font-size: 0.875rem
+    outline: none
+    transition: all 0.15s ease
+
+    &::placeholder
+      color: #94a3b8
+
+    &:focus
+      background: #fff
+      border-color: #93c5fd
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12)
+
+.tasks-table-heading
+  display: flex
+  align-items: center
+  justify-content: space-between
+  padding: 0.15rem 0.15rem 0
+
+  &__title
+    margin: 0
+    font-size: 1rem
+    font-weight: 700
+    color: #0f172a
+
+  &__today
+    font-size: 0.8125rem
+    color: #64748b
+
+.tasks-table
+  border-radius: 0.75rem
+  overflow: hidden
+
+  tbody .v-data-table__td
+    vertical-align: middle
+    padding: 0.85rem 1rem !important
+
+  tbody tr:hover
+    background: #f8fafc
+
+.tasks-cell
+  display: flex
+  flex-direction: column
+  gap: 0.15rem
+  min-width: 0
+
+  &__title
+    border: 0
+    background: transparent
+    padding: 0
+    text-align: left
+    font: inherit
+    font-size: 0.875rem
+    font-weight: 600
+    color: #1d4ed8
+    cursor: pointer
+
+    &:hover
+      text-decoration: underline
+
+  &__text
+    font-size: 0.875rem
+    color: #1f2937
+
+  &__sub
+    font-size: 0.75rem
+    color: #64748b
+    white-space: normal
+    overflow-wrap: break-word
+
+  &__empty
+    color: #cbd5e1
+
+.tasks-deadline
+  font-size: 0.8125rem
+  color: #1f2937
+  white-space: nowrap
+
+  &--overdue
+    color: #dc2626
+    font-weight: 700
+
+.tasks-status
+  display: inline-flex
+  align-items: center
+  padding: 0.25rem 0.65rem
+  border-radius: 0.4rem
+  font-size: 0.75rem
+  font-weight: 600
+  white-space: nowrap
+
+  &--new
+    background: #eff6ff
+    color: #1d4ed8
+
+  &--waiting
+    background: #fef3c7
+    color: #b45309
+
+  &--progress
+    background: #dbeafe
+    color: #1e40af
+
+  &--done
+    background: #dcfce7
+    color: #15803d
+
+  &--muted
+    background: #f1f5f9
+    color: #64748b
+
+.tasks-empty-state
+  padding: 2.5rem 1rem
+  text-align: center
+  font-size: 0.875rem
+  color: #64748b
+
+@media (max-width: 1080px)
+  .tasks-app
+    grid-template-columns: 220px minmax(0, 1fr)
+    gap: 1rem
+
+  .tasks-global-tabs
+    grid-template-columns: repeat(2, 1fr)
+
+@media (max-width: 768px)
+  .tasks-app
+    grid-template-columns: 1fr
+
+  .tasks-sidebar
+    position: static
+
+  .tasks-filter-card__reset
+    margin-left: 0
+
+  .tasks-filter-card__results
+    margin-left: 0
+
 .monthly-report-stub
   display: flex
   align-items: center
@@ -421,13 +1246,29 @@
     color: #0f172a
 
   &__filters
-    padding: 1rem
+    padding: 1rem 1.1rem
+    display: flex
+    flex-direction: column
+    gap: 0.85rem
 
   &__primary
     display: grid
     grid-template-columns: repeat(3, minmax(0, 1fr))
     gap: 0.75rem
-    margin-bottom: 1rem
+    margin-bottom: 0
+
+  &__search-row
+    width: 100%
+
+    .v-field
+      border-radius: 0.5rem !important
+
+    .v-field__prepend-inner .v-icon
+      color: #2563eb !important
+      opacity: 1 !important
+
+      svg
+        fill: currentColor
 
   &__field
     display: flex
@@ -524,7 +1365,7 @@
 
 .monthly-filters-row
   display: grid
-  grid-template-columns: repeat(3, 1fr)
+  grid-template-columns: 1fr
   gap: 0.75rem
   margin-top: 1rem
   align-items: stretch
@@ -649,13 +1490,17 @@
     border-color: #9ca3af
 
   &--active
-    background: #111827
-    border-color: #111827
+    background: #2563eb
+    border-color: #2563eb
     color: #fff
 
     .monthly-chip__count
-      background: rgba(255, 255, 255, 0.18)
+      background: rgba(255, 255, 255, 0.25)
       color: #fff
+
+    &:hover
+      background: #1d4ed8
+      border-color: #1d4ed8
 
 @media (max-width: 1200px)
   .monthly-filters-row
@@ -664,6 +1509,199 @@
 @media (max-width: 960px)
   .monthly-filter-groups
     grid-template-columns: 1fr
+
+.monthly-tabs
+  display: flex
+  flex-wrap: wrap
+  gap: 0.5rem
+  margin: 0
+
+  &__tab
+    display: inline-flex
+    align-items: center
+    gap: 0.5rem
+    padding: 0.5rem 1rem
+    border: 1px solid #e5e7eb
+    border-radius: 0.6rem
+    background: #fff
+    color: #334155
+    font: inherit
+    font-size: 0.875rem
+    font-weight: 600
+    cursor: pointer
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease
+
+    &:hover
+      background: #f8fafc
+      border-color: #cbd5e1
+
+    &--active
+      background: #2563eb
+      border-color: #2563eb
+      color: #fff
+
+      .monthly-tabs__count
+        background: rgba(255, 255, 255, 0.25)
+        color: #fff
+
+  &__count
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    min-width: 1.35rem
+    height: 1.35rem
+    padding: 0 0.35rem
+    border-radius: 999px
+    background: #f1f5f9
+    color: #475569
+    font-size: 0.75rem
+    font-weight: 700
+
+.monthly-tab-panel
+  display: flex
+  flex-direction: column
+  gap: 0.85rem
+  margin-bottom: 1rem
+  padding: 1rem 1.1rem
+  border: 1px solid #e5e7eb
+  border-radius: 0.85rem
+  background: #fff
+
+  &__head
+    display: flex
+    align-items: flex-start
+    justify-content: space-between
+    gap: 1rem
+    flex-wrap: wrap
+
+  &__titles
+    min-width: 0
+
+  &__title
+    margin: 0
+    font-size: 1rem
+    font-weight: 700
+    color: #111827
+
+  &__hint
+    margin: 0.3rem 0 0
+    font-size: 0.8125rem
+    color: #64748b
+
+  &__actions
+    display: flex
+    gap: 0.5rem
+    flex-wrap: wrap
+
+  &__empty
+    margin: 0
+    padding: 0.75rem 0.9rem
+    border: 1px solid #eef2f7
+    border-radius: 0.6rem
+    background: #f8fafc
+    font-size: 0.875rem
+    color: #64748b
+
+/* Фильтры статусов внутри карточки таблицы. */
+.monthly-table-chips
+  display: flex
+  flex-wrap: wrap
+  align-items: center
+  gap: 0.75rem 1rem
+  padding: 0 1rem 0.75rem
+
+  > .monthly-filter-card__chips
+    flex: 1 1 16rem
+    min-width: 14rem
+    max-width: 24rem
+
+  &__autocomplete
+    .v-field
+      border-radius: 0.5rem !important
+
+.monthly-summary
+  &__btn
+    display: inline-flex
+    align-items: center
+    gap: 0.35rem
+    padding: 0.5rem 1rem
+    border: 1px solid #2563eb
+    border-radius: 0.6rem
+    background: #2563eb
+    color: #fff
+    font: inherit
+    font-size: 0.875rem
+    font-weight: 600
+    cursor: pointer
+    transition: opacity 0.15s ease
+
+    &:hover
+      opacity: 0.9
+
+    &:disabled
+      opacity: 0.5
+      cursor: default
+
+    &--ghost
+      background: #fff
+      border-color: #e5e7eb
+      color: #334155
+
+  &__composer
+    display: flex
+    flex-direction: column
+    gap: 0.6rem
+
+  &__composer-actions
+    display: flex
+    justify-content: flex-end
+    gap: 0.5rem
+
+  &__list
+    display: flex
+    flex-direction: column
+    gap: 0.6rem
+    margin: 0
+    padding: 0
+    list-style: none
+
+  &__item
+    display: flex
+    flex-direction: column
+    gap: 0.35rem
+    padding: 0.75rem 0.9rem
+    border: 1px solid #eef2f7
+    border-radius: 0.6rem
+    background: #f8fafc
+
+  &__item-head
+    display: flex
+    align-items: center
+    gap: 0.75rem
+    flex-wrap: wrap
+
+  &__item-name
+    border: 0
+    background: transparent
+    padding: 0
+    color: #1d4ed8
+    font: inherit
+    font-size: 0.875rem
+    font-weight: 600
+    cursor: pointer
+    text-align: left
+
+    &:hover
+      text-decoration: underline
+
+  &__item-meta
+    font-size: 0.75rem
+    color: #64748b
+
+  &__item-text
+    margin: 0
+    font-size: 0.875rem
+    color: #334155
 
 .report-table-section
   display: flex
@@ -799,13 +1837,13 @@
 
 .monthly-report-table-card
   flex: 1 1 auto
-  min-height: 18rem
+  min-height: auto
   display: flex !important
   flex-direction: column !important
 
   &.report-table-card--sticky,
   &.v-card.report-table-card--sticky
-    overflow: hidden !important
+    overflow: visible !important
 
   > .report-table-title
     flex: 0 0 auto
@@ -816,17 +1854,18 @@
     display: flex !important
     flex-direction: column
     margin-bottom: 0
-    overflow: hidden
+    overflow: visible !important
 
     &.v-table
-      overflow: hidden !important
+      overflow: visible !important
 
     > .v-table__wrapper
       flex: 1 1 auto
-      min-height: 12rem
-      max-height: calc(100dvh - 22rem)
-      overflow: auto !important
-      overscroll-behavior: contain
+      min-height: auto
+      max-height: none !important
+      overflow-x: auto !important
+      overflow-y: visible !important
+      overscroll-behavior: auto
       max-width: 100%
 
       thead
@@ -836,12 +1875,11 @@
 
     > .v-data-table-footer
       flex: 0 0 auto
-      position: sticky
-      bottom: 0
-      z-index: 5
+      position: static
+      z-index: auto
       margin-top: auto
       background: #ffffff !important
-      box-shadow: 0 -6px 16px rgba(15, 23, 42, 0.06)
+      box-shadow: none
       border-top: 1px solid #eef2f7
 
     table
@@ -895,6 +1933,63 @@
   &__input
     min-width: 10rem
     text-align: left
+
+  &__input.status-participation-select
+    width: 100%
+    min-width: 0 !important
+
+    .v-input__control,
+    .v-field
+      width: 100%
+      max-width: 100%
+
+    .v-field
+      font-size: 0.6875rem
+      min-height: 28px !important
+      height: auto !important
+
+    .v-field__input,
+    .v-select__selection-text,
+    .v-autocomplete__selection
+      white-space: normal !important
+      overflow-wrap: break-word !important
+      word-break: normal !important
+      overflow: visible !important
+      text-overflow: clip !important
+      line-height: 1.2 !important
+      height: auto !important
+      max-width: 100% !important
+      font-size: 0.6875rem !important
+
+    .v-field__input > input
+      white-space: normal !important
+      overflow-wrap: break-word !important
+      word-break: normal !important
+      overflow: visible !important
+      text-overflow: clip !important
+      height: auto !important
+      min-height: 1.2em !important
+      flex: 1 1 auto
+      min-width: 0
+      max-width: 100% !important
+      font-size: 0.6875rem !important
+
+    .v-field__input
+      min-height: 28px !important
+      height: auto !important
+      padding-top: 5px !important
+      padding-bottom: 5px !important
+      padding-inline: 6px !important
+      align-items: flex-start !important
+      flex-wrap: wrap
+
+    .v-field__append-inner,
+    .v-field__clearable
+      padding-top: 0 !important
+      padding-inline: 2px !important
+
+    .v-icon
+      font-size: 1rem !important
 
   &__send
     text-transform: none
@@ -1032,11 +2127,15 @@
         color: #64748b
 
 .monthly-stats
-  display: grid
-  grid-template-columns: repeat(4, minmax(0, 1fr))
+  display: flex
+  flex-wrap: nowrap
   gap: 1rem
 
-  &__card
+  &__card--total,
+  &__card--report,
+  &__card--warning
+    flex: 1 1 0
+    min-width: 0
     display: flex
     align-items: flex-start
     gap: 0.85rem
@@ -1054,21 +2153,17 @@
     &:hover
       border-color: #cbd5e1
 
-    &--active
+    &.monthly-stats__card--active
       box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18)
       border-color: #93c5fd
 
-    &--warning.monthly-stats__card--active
-      box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.18)
-      border-color: #fdba74
+  &__card--report.monthly-stats__card--active
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18)
+    border-color: #fca5a5
 
-    &--danger.monthly-stats__card--active
-      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18)
-      border-color: #fca5a5
-
-    &--report.monthly-stats__card--active
-      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18)
-      border-color: #93c5fd
+  &__card--warning.monthly-stats__card--active
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.18)
+    border-color: #fdba74
 
   &__icon
     flex: 0 0 auto
@@ -1078,6 +2173,11 @@
     width: 2.75rem
     height: 2.75rem
     border-radius: 999px
+
+    &-img
+      width: 100%
+      height: 100%
+      object-fit: contain
 
     &--total
       background: #d1fae5
@@ -1121,7 +2221,7 @@
       color: #dc2626
 
     &--report
-      color: #2563eb
+      color: #dc2626
 
   &__badge
     display: inline-flex
@@ -1142,16 +2242,8 @@
       color: #b91c1c
 
     &--report
-      background: #dbeafe
-      color: #1d4ed8
-
-@media (max-width: 1200px)
-  .monthly-stats
-    grid-template-columns: repeat(2, minmax(0, 1fr))
-
-@media (max-width: 960px)
-  .monthly-stats
-    grid-template-columns: 1fr
+      background: #fee2e2
+      color: #dc2626
 
 .monthly-report-table
   tbody .v-data-table__td.v-data-table-column--align-start

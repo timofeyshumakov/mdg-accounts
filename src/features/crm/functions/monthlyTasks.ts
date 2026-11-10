@@ -8,8 +8,10 @@ import {
 import { getBx24 } from './bitrixClient';
 import { extractScalarValues } from './bitrixFields';
 import { NAV_EXTERNAL_PATHS } from './crmNavigation';
+import { TASKS_PARTNERS_GROUP_ID } from './tasksGroup';
 
-export const TASKS_GROUP_ID = 1314;
+/** Группа задач отдела партнёров — единая константа. */
+export const TASKS_GROUP_ID = TASKS_PARTNERS_GROUP_ID;
 
 /** Статус задачи, который нужно исключать из отчёта. */
 export const TASKS_EXCLUDED_STAGE_ID = '16688';

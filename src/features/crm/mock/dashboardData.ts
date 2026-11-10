@@ -37,9 +37,11 @@ export const navItems: NavItem[] = [
   { id: 'partners', title: 'Справочник партнеров', href: '#' },
   { id: 'organizations', title: 'Справочник организаций', href: '#' },
   { id: 'our-events', title: 'Наши мероприятия', href: '#' },
+  { id: 'our-events-new', title: 'Наши мероприятия (NEW)', href: '#' },
   { id: 'competitor-events', title: 'Мероприятия конкурентов', href: '#' },
   { id: 'potential-partners', title: 'Потенциальные партнеры', href: '#' },
   { id: 'tasks', title: 'Задачи', href: '#' },
+  { id: 'tasks-new', title: 'Задачи (NEW)', href: '#' },
   { id: 'analytics', title: 'Аналитика', href: '#' },
   { id: 'monthly-report', title: 'Ежемесячная отчетность', href: '#' },
 ];
@@ -68,12 +70,12 @@ export const navGroups: NavGroup[] = [
   {
     id: 'events',
     title: 'Мероприятия',
-    children: [navById('our-events'), navById('competitor-events')],
+    children: [navById('our-events'), navById('our-events-new'), navById('competitor-events')],
   },
   {
     id: 'development',
     title: 'Развитие партнеров',
-    children: [navById('tasks'), navById('potential-partners')],
+    children: [navById('tasks'), navById('potential-partners'), navById('tasks-new')],
   },
   {
     id: 'reports',

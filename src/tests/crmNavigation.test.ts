@@ -19,15 +19,15 @@ describe('crmNavigation', () => {
     const [base, queryString = ''] = path.split('?');
     const query = new URLSearchParams(queryString);
 
-    expect(base).toBe('/page/meropriyatiya/baoqgd/type/1052/list/');
+    expect(base).toBe('/page/meropriyatiya/baoqgd/type/1052/list/category/110/');
     expect(query.get('apply_filter')).toBe('Y');
-    expect(query.get('STAGE_SEMANTIC_ID')).toBe(OUR_EVENTS_STAGE_SEMANTIC_IN_PROGRESS);
-    expect(query.get('STAGE_SEMANTIC_ID_label')).toBe('В работе');
+    expect(query.get('STAGE_SEMANTIC_ID[]')).toBe(OUR_EVENTS_STAGE_SEMANTIC_IN_PROGRESS);
+    expect(query.get('STAGE_SEMANTIC_ID_label[]')).toBe('В работе');
   });
 
   it('can build our events list path without stage filter', () => {
     expect(buildOurEventsListPath(1052, { inProgressOnly: false })).toBe(
-      '/page/meropriyatiya/baoqgd/type/1052/list/',
+      '/page/meropriyatiya/baoqgd/type/1052/list/category/110/',
     );
   });
 });

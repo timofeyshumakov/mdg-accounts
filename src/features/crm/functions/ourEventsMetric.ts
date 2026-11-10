@@ -19,6 +19,9 @@ export const OUR_EVENTS_SMART_PROCESS_ID = 38;
 /** entityTypeId для REST-запросов crm.item.* к «Мероприятиям». */
 export const OUR_EVENTS_ENTITY_TYPE_ID = 1052;
 
+/** Категория (воронка) смарт-процесса «Мероприятия» для URL списка. */
+export const OUR_EVENTS_CATEGORY_ID = 110;
+
 export const OUR_EVENTS_TYPE_TITLE = 'мероприятия';
 
 /**

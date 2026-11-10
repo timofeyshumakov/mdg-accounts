@@ -98,11 +98,11 @@ describe('partnersPotentialChart', () => {
     );
     const query = new URLSearchParams(path.split('?')[1]);
 
-    expect(path.startsWith('/page/meropriyatiya/baoqgd/type/1052/list/?')).toBe(true);
+    expect(path.startsWith('/page/meropriyatiya/baoqgd/type/1052/list/category/110/?')).toBe(true);
     expect(query.get('apply_filter')).toBe('Y');
     expect(query.get('CONTACT_ID')).toBe('42');
     expect(query.get('CONTACT_ID_label')).toBe('Иванов И.И.');
-    expect(query.get('STAGE_SEMANTIC_ID')).toBe('P');
-    expect(query.get('STAGE_SEMANTIC_ID_label')).toBe('В работе');
+    expect(query.get('STAGE_SEMANTIC_ID[]')).toBe('P');
+    expect(query.get('STAGE_SEMANTIC_ID_label[]')).toBe('В работе');
   });
 });

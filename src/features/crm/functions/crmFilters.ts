@@ -331,24 +331,57 @@ interface BitrixDepartment {
 }
 
 /** Отдел для фильтра «Ответственный» в CRM / monthly report. */
-export const PARTNERS_DEPARTMENT_NAME = 'Отдел по работе с партнерами';
-/** ID отдела «Отдел по работе с партнерами» (department.get). */
+export const PARTNERS_DEPARTMENT_NAME = 'Партнёрские проекты';
+/** ID отдела «Партнёрские проекты» (department.get). */
 export const PARTNERS_DEPARTMENT_ID = '566';
+
+/**
+ * Прежние названия отдела — на случай переименования на портале.
+ * Порядок важен: первое совпадение выигрывает.
+ */
+const PARTNERS_DEPARTMENT_ALIASES = [
+  'Партнёрские проекты',
+  'Партнерские проекты',
+  'Отдел по работе с партнерами',
+  'Отдел по работе с партнёрами',
+];
+
+/**
+ * Тестовые учётки, которые не должны попадать в фильтр ответственных.
+ * Пример: «Тестовый Пользователь (разработка)».
+ */
+const TEST_USER_PATTERN = /\(разработка\)|тестов(ый|ая|ое)|^test/i;
 
 function formatUserName(user: BitrixUser): string {
   const parts = [user.LAST_NAME, user.NAME, user.SECOND_NAME]
     .filter(Boolean)
-    .map(String);
+    .map((part) => String(part).trim())
+    .filter(Boolean);
 
   return parts.join(' ').trim() || `Пользователь #${user.ID}`;
 }
 
 export async function findDepartmentIdsByName(name: string): Promise<string[]> {
   const departments = await fetchAllPages<BitrixDepartment>('department.get', {});
-  const needle = name.trim().toLowerCase();
+  const normalize = (value: string) => value.trim().toLowerCase().replace(/ё/g, 'е');
 
-  const root = departments.find((dept) => String(dept.NAME ?? '').trim().toLowerCase() === needle)
-    ?? departments.find((dept) => String(dept.NAME ?? '').trim().toLowerCase().includes(needle));
+  // Ищем по имени и по известным прежним названиям отдела партнёров.
+  const candidates = [name, ...PARTNERS_DEPARTMENT_ALIASES]
+    .map(normalize)
+    .filter(Boolean);
+
+  let root: BitrixDepartment | undefined;
+  for (const needle of candidates) {
+    root = departments.find((dept) => normalize(String(dept.NAME ?? '')) === needle);
+    if (root) {
+      break;
+    }
+  }
+
+  // Точного совпадения нет — пробуем частичное по «партнёр/партнер».
+  if (!root) {
+    root = departments.find((dept) => /партн(ё|е)р/.test(normalize(String(dept.NAME ?? ''))));
+  }
 
   if (!root?.ID) {
     return [];
@@ -412,10 +445,12 @@ export async function loadAssignedUsers(): Promise<FilterOption[]> {
         if (!id || usersById.has(id)) {
           return;
         }
-        usersById.set(id, {
-          id,
-          title: formatUserName(user),
-        });
+        const title = formatUserName(user);
+        // Тестовые учётки в фильтре не нужны.
+        if (TEST_USER_PATTERN.test(title)) {
+          return;
+        }
+        usersById.set(id, { id, title });
       });
     }),
   );

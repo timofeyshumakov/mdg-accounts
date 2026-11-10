@@ -18,6 +18,55 @@
     />
 
     <template v-if="!isLoading">
+      <section class="monthly-stats">
+        <button
+          type="button"
+          class="monthly-stats__card--total"
+          :class="{ 'monthly-stats__card--active': attentionFilter === 'all' }"
+          @click="attentionFilter = 'all'"
+        >
+          <span class="monthly-stats__icon monthly-stats__icon--total">
+            <img :src="partnersIcon" alt="Всего партнеров" class="monthly-stats__icon-img">
+          </span>
+          <div class="monthly-stats__body">
+            <span class="monthly-stats__label">Всего партнеров</span>
+            <strong class="monthly-stats__value">{{ stats.total }}</strong>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="monthly-stats__card--report"
+          :class="{ 'monthly-stats__card--active': attentionFilter === 'no-report' }"
+          @click="toggleAttentionFilter('no-report')"
+        >
+          <span class="monthly-stats__icon monthly-stats__icon--report">
+            <img :src="noReportsIcon" alt="Нет отчета" class="monthly-stats__icon-img">
+          </span>
+          <div class="monthly-stats__body">
+            <span class="monthly-stats__label">Нет отчета</span>
+            <strong class="monthly-stats__value monthly-stats__value--report">{{ stats.noReport }}</strong>
+            <span class="monthly-stats__badge monthly-stats__badge--report">Требует внимания</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="monthly-stats__card--warning"
+          :class="{ 'monthly-stats__card--active': attentionFilter === 'no-touches' }"
+          @click="toggleAttentionFilter('no-touches')"
+        >
+          <span class="monthly-stats__icon monthly-stats__icon--warning">
+            <img :src="noTouchesIcon" alt="Нет касаний" class="monthly-stats__icon-img">
+          </span>
+          <div class="monthly-stats__body">
+            <span class="monthly-stats__label">Нет касаний</span>
+            <strong class="monthly-stats__value monthly-stats__value--warning">{{ stats.noTouches }}</strong>
+            <span class="monthly-stats__badge monthly-stats__badge--warning">Требует внимания</span>
+          </div>
+        </button>
+      </section>
+
       <article class="monthly-report__filters panel">
         <h3 class="monthly-report__title">Фильтры</h3>
 
@@ -113,176 +162,173 @@
           </div>
         </div>
 
-        <div class="monthly-filters-row">
-          <article class="monthly-filter-card">
-            <h4 class="monthly-filter-card__title">Актуальные</h4>
-            <div class="monthly-filter-card__chips">
-              <h5 class="monthly-filter-card__subtitle">Статус отношений</h5>
-              <button
-                v-for="chip in actualRelationStatusChips"
-                :key="chip.id"
-                type="button"
-                class="monthly-chip"
-                :class="{ 'monthly-chip--active': selectedRelationStatuses.includes(chip.id) }"
-                @click="toggleRelationStatus(chip.id)"
-              >
-                <span class="monthly-chip__label">{{ chip.label }}</span>
-                <span class="monthly-chip__count">{{ chip.count }}</span>
-              </button>
-            </div>
-            <div class="monthly-filter-card__chips">
-              <h5 class="monthly-filter-card__subtitle">Текущий статус</h5>
-              <button
-                v-for="chip in actualCurrentStatusChips"
-                :key="chip.id"
-                type="button"
-                class="monthly-chip"
-                :class="{ 'monthly-chip--active': selectedCurrentStatuses.includes(chip.id) }"
-                @click="toggleCurrentStatus(chip.id)"
-              >
-                <span class="monthly-chip__label">{{ chip.label }}</span>
-                <span class="monthly-chip__count">{{ chip.count }}</span>
-              </button>
-            </div>
-          </article>
+        <nav class="monthly-tabs">
+          <button
+            v-for="tab in monthlyTabs"
+            :key="tab.id"
+            type="button"
+            class="monthly-tabs__tab"
+            :class="{ 'monthly-tabs__tab--active': activeTab === tab.id }"
+            @click="activeTab = tab.id"
+          >
+            {{ tab.title }}
+            <span v-if="tab.count != null" class="monthly-tabs__count">{{ tab.count }}</span>
+          </button>
+        </nav>
 
-          <article class="monthly-filter-card">
-            <h4 class="monthly-filter-card__title">Новые</h4>
-            <div class="monthly-filter-card__chips">
-              <h5 class="monthly-filter-card__subtitle">Текущий статус</h5>
-              <button
-                v-for="chip in newCurrentStatusChips"
-                :key="chip.id"
-                type="button"
-                class="monthly-chip"
-                :class="{ 'monthly-chip--active': selectedNewCurrentStatuses.includes(chip.id) }"
-                @click="toggleNewCurrentStatus(chip.id)"
-              >
-                <span class="monthly-chip__label">{{ chip.label }}</span>
-                <span class="monthly-chip__count">{{ chip.count }}</span>
-              </button>
-            </div>
-          </article>
-
-          <article class="monthly-insights panel">
-            <h4 class="monthly-insights__title">Развитие и рыночные инсайты</h4>
-            <div class="monthly-insights__list">
-              <button
-                v-for="link in insightLinks"
-                :key="link.id"
-                type="button"
-                class="monthly-insights__item"
-                @click="onInsightClick(link)"
-              >
-                <span>{{ link.title }}</span>
-                <v-icon icon="$chevronRight" size="18" />
-              </button>
-            </div>
-          </article>
+        <div v-if="activeTab === 'actual' || activeTab === 'new'" class="monthly-report__search-row">
+          <v-text-field
+            v-model="search"
+            placeholder="Поиск по ФИО, организации"
+            density="compact"
+            variant="outlined"
+            hide-details
+            clearable
+            prepend-inner-icon="$magnify"
+          />
         </div>
       </article>
 
-      <section class="monthly-stats">
-        <button
-          type="button"
-          class="monthly-stats__card monthly-stats__card--total"
-          :class="{ 'monthly-stats__card--active': attentionFilter === 'all' }"
-          @click="attentionFilter = 'all'"
-        >
-          <span class="monthly-stats__icon monthly-stats__icon--total">
-            <v-icon icon="$accountGroupOutline" size="22" />
-          </span>
-          <div class="monthly-stats__body">
-            <span class="monthly-stats__label">Всего партнеров</span>
-            <strong class="monthly-stats__value">{{ stats.total }}</strong>
-          </div>
-        </button>
+      <MonthlySummaryTab
+        v-if="activeTab === 'summary'"
+        :period="reportPeriod"
+        :assigned-ids="selectedAssigned"
+      />
 
-        <button
-          type="button"
-          class="monthly-stats__card monthly-stats__card--report"
-          :class="{ 'monthly-stats__card--active': attentionFilter === 'no-report' }"
-          @click="toggleAttentionFilter('no-report')"
-        >
-          <span class="monthly-stats__icon monthly-stats__icon--report">
-            <v-icon icon="$fileDocumentOutline" size="22" />
-          </span>
-          <div class="monthly-stats__body">
-            <span class="monthly-stats__label">Нет отчета</span>
-            <strong class="monthly-stats__value monthly-stats__value--report">{{ stats.noReport }}</strong>
-            <span class="monthly-stats__badge monthly-stats__badge--report">Требует внимания</span>
-          </div>
-        </button>
+      <MonthlySpTab
+        v-else-if="activeTab === 'plan'"
+        title="План по контактам"
+        hint="Планы по привлечению и развитию контактов из смарт-процесса «План по контактам»."
+        create-label="Создать план"
+        :create-path="MONTHLY_PLAN_CREATE_PATH"
+        loading-label="Загрузка плана…"
+        empty-label="План по контактам пуст."
+        :columns="planColumns"
+        :loader="loadMonthlyPlans"
+        :details-path="buildMonthlyPlanDetailsPath"
+        :assigned-ids="selectedAssigned"
+        :months="selectedMonths"
+      />
 
-        <button
-          type="button"
-          class="monthly-stats__card monthly-stats__card--warning"
-          :class="{ 'monthly-stats__card--active': attentionFilter === 'no-touches' }"
-          @click="toggleAttentionFilter('no-touches')"
-        >
-          <span class="monthly-stats__icon monthly-stats__icon--warning">
-            <v-icon icon="$alert" size="22" />
-          </span>
-          <div class="monthly-stats__body">
-            <span class="monthly-stats__label">Нет касаний</span>
-            <strong class="monthly-stats__value monthly-stats__value--warning">{{ stats.noTouches }}</strong>
-            <span class="monthly-stats__badge monthly-stats__badge--warning">Требует внимания</span>
-          </div>
-        </button>
+      <MonthlySpTab
+        v-else-if="activeTab === 'pains'"
+        title="Боли и предложения по улучшению"
+        create-label="Создать запись"
+        :create-path="MONTHLY_PAINS_CREATE_PATH"
+        loading-label="Загрузка болей и предложений…"
+        empty-label="Записей пока нет."
+        :columns="painColumns"
+        :loader="loadMonthlyPains"
+        :details-path="buildMonthlyPainsDetailsPath"
+        :assigned-ids="selectedAssigned"
+      />
 
-        <button
-          type="button"
-          class="monthly-stats__card monthly-stats__card--danger"
-          :class="{ 'monthly-stats__card--active': attentionFilter === 'no-next-step' }"
-          @click="toggleAttentionFilter('no-next-step')"
-        >
-          <span class="monthly-stats__icon monthly-stats__icon--danger">
-            <v-icon icon="$alert" size="22" />
-          </span>
-          <div class="monthly-stats__body">
-            <span class="monthly-stats__label">Нет следующего шага</span>
-            <strong class="monthly-stats__value monthly-stats__value--danger">{{ stats.noNextStep }}</strong>
-            <span class="monthly-stats__badge monthly-stats__badge--danger">Требует внимания</span>
-          </div>
-        </button>
+      <MonthlyEventsTab
+        v-else-if="activeTab === 'our-events'"
+        title="Наши мероприятия"
+        empty-label="Нет мероприятий за выбранный месяц."
+        :columns="ourEventColumns"
+        :period="reportPeriod"
+        :details-path="buildOurEventDetailsPath"
+        :loader="loadOurEventsForTable"
+        :assigned-ids="selectedAssigned"
+      />
 
-      </section>
+      <MonthlyEventsTab
+        v-else-if="activeTab === 'competitor-events'"
+        title="Мероприятия конкурентов"
+        empty-label="Нет мероприятий конкурентов за выбранный месяц."
+        :columns="competitorEventColumns"
+        :period="reportPeriod"
+        :details-path="buildCompetitorEventDetailsPath"
+        :loader="loadCompetitorEventsForTable"
+        :assigned-ids="selectedAssigned"
+      />
 
-      <div class="monthly-report__search panel">
-        <v-text-field
-          v-model="search"
-          placeholder="Поиск по ФИО, организации"
-          density="compact"
-          variant="outlined"
-          hide-details
-          clearable
-          prepend-inner-icon="$magnify"
-        />
-      </div>
-
-      <div class="monthly-report__summary panel">
-        <div class="monthly-report__summary-content">
-          <div class="monthly-report__summary-text">
-            <h4 class="monthly-report__summary-title">Краткое резюме месяца</h4>
-            <p class="monthly-report__summary-description">Заполняется в 3–5 предложениях. Что изменилось за месяц и где есть движение?</p>
-          </div>
-          <button
-            type="button"
-            class="monthly-report__summary-btn"
-            @click="openMonthlySummary"
-          >
-            Открыть резюме
-            <v-icon icon="$chevronRight" size="18" />
-          </button>
-        </div>
-      </div>
-
-      <section class="report-table-section">
+      <template v-else>
+      <section v-if="activeTab === 'actual'" class="report-table-section">
         <v-card class="report-table-card report-table-card--sticky panel monthly-report-table-card">
           <v-card-title class="report-table-title">
             Актуальные партнеры
             <span class="monthly-report__table-count">{{ actualFilteredRows.length }}</span>
           </v-card-title>
+
+          <div class="monthly-table-chips">
+            <div class="monthly-filter-card__chips">
+              <v-autocomplete
+                v-model="selectedRelationStatuses"
+                :items="actualRelationStatusChips"
+                item-title="label"
+                item-value="id"
+                label="Статус отношений"
+                placeholder="Все статусы отношений"
+                density="compact"
+                variant="outlined"
+                hide-details
+                multiple
+                chips
+                clearable
+                class="monthly-table-chips__autocomplete"
+              >
+                <template #prepend-item>
+                  <v-list-item>
+                    <v-checkbox
+                      :model-value="isAllSelected(selectedRelationStatuses, actualRelationStatusChips)"
+                      label="Выбрать все"
+                      hide-details
+                      density="compact"
+                      :disabled="!actualRelationStatusChips.length"
+                      @update:model-value="toggleAllRelationStatuses($event)"
+                    />
+                  </v-list-item>
+                </template>
+                <template #item="{ props: itemProps, item }">
+                  <v-list-item v-bind="itemProps">
+                    <template #append>
+                      <span class="monthly-chip__count">{{ item.raw.count }}</span>
+                    </template>
+                  </v-list-item>
+                </template>
+              </v-autocomplete>
+            </div>
+            <div class="monthly-filter-card__chips">
+              <v-autocomplete
+                v-model="selectedCurrentStatuses"
+                :items="actualCurrentStatusChips"
+                item-title="label"
+                item-value="id"
+                label="Текущий статус"
+                placeholder="Все текущие статусы"
+                density="compact"
+                variant="outlined"
+                hide-details
+                multiple
+                chips
+                clearable
+                class="monthly-table-chips__autocomplete"
+              >
+                <template #prepend-item>
+                  <v-list-item>
+                    <v-checkbox
+                      :model-value="isAllSelected(selectedCurrentStatuses, actualCurrentStatusChips)"
+                      label="Выбрать все"
+                      hide-details
+                      density="compact"
+                      :disabled="!actualCurrentStatusChips.length"
+                      @update:model-value="toggleAllCurrentStatuses($event)"
+                    />
+                  </v-list-item>
+                </template>
+                <template #item="{ props: itemProps, item }">
+                  <v-list-item v-bind="itemProps">
+                    <template #append>
+                      <span class="monthly-chip__count">{{ item.raw.count }}</span>
+                    </template>
+                  </v-list-item>
+                </template>
+              </v-autocomplete>
+            </div>
+          </div>
 
           <v-data-table
             :headers="actualHeaders"
@@ -291,7 +337,7 @@
             density="comfortable"
             hover
             class="report-data-table report-data-table--paginated activity-report-table sticky-report-table monthly-report-table"
-            :items-per-page="25"
+            :items-per-page="20"
             :row-props="getRowProps"
           >
             <template #header.calls="{ column }">
@@ -377,7 +423,7 @@
                   hide-details
                   clearable
                   placeholder="Статус отношений"
-                  class="monthly-table__input"
+                  class="monthly-table__input status-participation-select"
                   :menu-props="{ maxHeight: 280 }"
                   @update:model-value="onRelationStatusChange(item, $event)"
                 />
@@ -483,7 +529,7 @@
                   hide-details
                   clearable
                   placeholder="Текущий статус"
-                  class="monthly-table__input"
+                  class="monthly-table__input status-participation-select"
                   :menu-props="{ maxHeight: 280 }"
                   @update:model-value="onCurrentStatusChange(item, $event)"
                 />
@@ -546,12 +592,54 @@
             </template>
           </v-data-table>
         </v-card>
+      </section>
 
+      <section v-if="activeTab === 'new'" class="report-table-section">
         <v-card class="report-table-card report-table-card--sticky panel monthly-report-table-card">
           <v-card-title class="report-table-title">
             Новые партнеры
             <span class="monthly-report__table-count">{{ newFilteredRows.length }}</span>
           </v-card-title>
+
+          <div class="monthly-table-chips">
+            <div class="monthly-filter-card__chips">
+              <v-autocomplete
+                v-model="selectedNewCurrentStatuses"
+                :items="newCurrentStatusChips"
+                item-title="label"
+                item-value="id"
+                label="Текущий статус"
+                placeholder="Все текущие статусы"
+                density="compact"
+                variant="outlined"
+                hide-details
+                multiple
+                chips
+                clearable
+                class="monthly-table-chips__autocomplete"
+              >
+                <template #prepend-item>
+                  <v-list-item>
+                    <v-checkbox
+                      :model-value="isAllSelected(selectedNewCurrentStatuses, newCurrentStatusChips)"
+                      label="Выбрать все"
+                      hide-details
+                      density="compact"
+                      :disabled="!newCurrentStatusChips.length"
+                      @update:model-value="toggleAllNewCurrentStatuses($event)"
+                    />
+                  </v-list-item>
+                </template>
+                <template #item="{ props: itemProps, item }">
+                  <v-list-item v-bind="itemProps">
+                    <template #append>
+                      <span class="monthly-chip__count">{{ item.raw.count }}</span>
+                    </template>
+                  </v-list-item>
+                </template>
+              </v-autocomplete>
+            </div>
+          </div>
 
           <v-data-table
             :headers="newHeaders"
@@ -702,7 +790,7 @@
                   hide-details
                   clearable
                   placeholder="Текущий статус"
-                  class="monthly-table__input"
+                  class="monthly-table__input status-participation-select"
                   :menu-props="{ maxHeight: 280 }"
                   @update:model-value="onCurrentStatusChange(item, $event)"
                 />
@@ -766,6 +854,7 @@
           </v-data-table>
         </v-card>
       </section>
+      </template>
 
       <MonthlyTouchesDialog
         v-model="touchesDialogOpen"
@@ -849,6 +938,25 @@ import MonthlyTouchesDialog from './MonthlyTouchesDialog.vue';
 import MonthlyTouchCreateDialog from './MonthlyTouchCreateDialog.vue';
 import MonthlyTasksDialog from './MonthlyTasksDialog.vue';
 import MonthlyFieldEditDialog from './MonthlyFieldEditDialog.vue';
+import MonthlySummaryTab from './MonthlySummaryTab.vue';
+import MonthlySpTab from './MonthlySpTab.vue';
+import type { SpColumn } from './MonthlySpTab.vue';
+import MonthlyEventsTab from './MonthlyEventsTab.vue';
+import type { EventColumn } from './MonthlyEventsTab.vue';
+import {
+  buildMonthlyPainsDetailsPath,
+  buildMonthlyPlanDetailsPath,
+  loadMonthlyPains,
+  loadMonthlyPlans,
+  MONTHLY_PAINS_CREATE_PATH,
+  MONTHLY_PLAN_CREATE_PATH,
+} from '../functions/monthlySummary';
+import {
+  buildCompetitorEventDetailsPath,
+  buildOurEventDetailsPath,
+  loadCompetitorEventsForTable,
+  loadOurEventsForTable,
+} from '../functions/monthlyEvents';
 import {
   filterMonthlyReportRows,
   filterMonthlyReportRowsForChipCounts,
@@ -863,6 +971,9 @@ import {
   type TouchKind,
 } from '../mock/monthlyReportData';
 import { useStickyReportTableHeaders } from '../../../composables/useStickyReportTableHeaders';
+import partnersIcon from '../assets/icons/partners.png';
+import noReportsIcon from '../assets/icons/no-reports.png';
+import noTouchesIcon from '../assets/icons/no-touches.png';
 // import underConstructionSrc from '../assets/under-construction.png';
 
 const {
@@ -905,24 +1016,21 @@ const tasksDialogItems = ref<MonthlyTaskItem[]>([]);
 const sendingRowId = ref<string | null>(null);
 const submitError = ref('');
 const attentionFilter = ref<'all' | 'no-touches' | 'no-next-step' | 'no-report'>('all');
+const activeTab = ref<MonthlyTabId>('actual');
 const contactIdsWithReport = ref<Set<string>>(new Set());
 const userDisplaysById = ref<Map<string, UserDisplay>>(new Map());
 const failedAvatars = ref<Set<string>>(new Set());
 
-const insightLinks = [
-  {
-    id: 'plan',
-    title: 'План по привлечению и развитию контактов',
-    path: '/crm/type/1262/list/category/0/',
-  },
-  {
-    id: 'pain',
-    title: 'Боли и предложения по улучшению',
-    path: '/crm/type/1266/list/category/0/',
-  },
-] as const;
-
 const savingCell = ref(false);
+
+type MonthlyTabId =
+  | 'summary'
+  | 'plan'
+  | 'pains'
+  | 'our-events'
+  | 'competitor-events'
+  | 'actual'
+  | 'new';
 
 type FieldEditorKind = 'nosologies';
 
@@ -979,6 +1087,51 @@ const newHeaders = [
   { title: 'Действия', key: 'actions', align: 'center' as const, sortable: false },
 ];
 
+/** Колонки таблицы «План по контактам». */
+const planColumns: SpColumn[] = [
+  { key: 'assignedName', title: 'Ответственный' },
+  { key: 'month', title: 'Месяц', align: 'center' },
+  { key: 'direction', title: 'Направление / контакт', wrap: true },
+  { key: 'goal', title: 'Цель', wrap: true },
+  { key: 'currentStatus', title: 'Текущий статус', wrap: true },
+  { key: 'nextStep', title: 'Следующий шаг', wrap: true },
+  { key: 'priority', title: 'Приоритет', align: 'center' },
+  { key: 'created', title: 'Дата создания', align: 'center' },
+];
+
+/** Колонки таблицы «Боли и предложения». */
+const painColumns: SpColumn[] = [
+  // Ответственный — на 25% уже прочих колонок (160px вместо ~215px).
+  { key: 'assignedName', title: 'Ответственный', width: 160 },
+  { key: 'created', title: 'Когда создан', align: 'center' },
+  { key: 'problem', title: 'Боль / проблема' },
+  { key: 'impact', title: 'Как влияет на работу' },
+  { key: 'suggestion', title: 'Что предлагаю улучшить' },
+];
+
+/** Колонки таблицы «Наши мероприятия». */
+const ourEventColumns: EventColumn[] = [
+  { key: 'startDate', title: 'Дата начала', align: 'center' },
+  { key: 'endDate', title: 'Дата завершения', align: 'center' },
+  { key: 'assigned', title: 'Ответственный' },
+  { key: 'type', title: 'Тип', wrap: true },
+  { key: 'city', title: 'Город', wrap: true },
+  { key: 'client', title: 'Клиент', wrap: true },
+  { key: 'audience', title: 'Целевая аудитория', wrap: true },
+  { key: 'stage', title: 'Стадия', wrap: true },
+];
+
+/** Колонки таблицы «Мероприятия конкурентов». */
+const competitorEventColumns: EventColumn[] = [
+  { key: 'company', title: 'Компания' },
+  { key: 'assigned', title: 'Ответственный' },
+  { key: 'type', title: 'Тип мероприятия', wrap: true },
+  { key: 'nosology', title: 'Нозология', wrap: true },
+  { key: 'city', title: 'Город', wrap: true },
+  { key: 'startDate', title: 'Дата начала', align: 'center' },
+  { key: 'endDate', title: 'Дата завершения', align: 'center' },
+];
+
 const listFilterParams = computed(() => ({
   search: search.value,
   assignedIds: selectedAssigned.value,
@@ -992,16 +1145,35 @@ const listFilterParams = computed(() => ({
 
 const baseFilteredRows = computed(() => filterMonthlyReportRows(rows.value, listFilterParams.value));
 
+const touchesPeriod = computed(() =>
+  resolveTouchesPeriod(selectedMonths.value, selectedYears.value),
+);
+
+/** Фильтр «требует внимания» — применяется к обеим таблицам. */
+const attentionFilteredRows = computed(() => {
+  const filter = attentionFilter.value;
+  if (filter === 'all') {
+    return baseFilteredRows.value;
+  }
+
+  const { months, years } = touchesPeriod.value;
+  return baseFilteredRows.value.filter((row) => {
+    if (filter === 'no-touches') {
+      return !hasTouchesInPeriod(row, months, years);
+    }
+    if (filter === 'no-next-step') {
+      return !hasNextStep(row);
+    }
+    return !contactIdsWithReport.value.has(String(row.id));
+  });
+});
+
 const actualFilteredRows = computed(() =>
-  baseFilteredRows.value.filter((row) => row.partnerTypeId === 'active'),
+  attentionFilteredRows.value.filter((row) => row.partnerTypeId === 'active'),
 );
 
 const newFilteredRows = computed(() =>
-  baseFilteredRows.value.filter((row) => row.partnerTypeId === 'new'),
-);
-
-const touchesPeriod = computed(() =>
-  resolveTouchesPeriod(selectedMonths.value, selectedYears.value),
+  attentionFilteredRows.value.filter((row) => row.partnerTypeId === 'new'),
 );
 
 const reportPeriod = computed(() =>
@@ -1019,50 +1191,15 @@ const stats = computed(() => {
   };
 });
 
-const actualStats = computed(() => {
-  const list = actualFilteredRows.value;
-  const { months, years } = touchesPeriod.value;
-  return {
-    total: list.length,
-    noTouches: list.filter((row) => !hasTouchesInPeriod(row, months, years)).length,
-    noNextStep: list.filter((row) => !hasNextStep(row)).length,
-    noReport: list.filter((row) => !contactIdsWithReport.value.has(String(row.id))).length,
-  };
-});
-
-const newStats = computed(() => {
-  const list = newFilteredRows.value;
-  const { months, years } = touchesPeriod.value;
-  return {
-    total: list.length,
-    noTouches: list.filter((row) => !hasTouchesInPeriod(row, months, years)).length,
-    noNextStep: list.filter((row) => !hasNextStep(row)).length,
-    noReport: list.filter((row) => !contactIdsWithReport.value.has(String(row.id))).length,
-  };
-});
-
-const filteredRows = computed(() => filterMonthlyReportRows(rows.value, {
-  ...listFilterParams.value,
-  onlyNoTouches: attentionFilter.value === 'no-touches',
-  onlyNoNextStep: attentionFilter.value === 'no-next-step',
-  onlyNoReport: attentionFilter.value === 'no-report',
-  reportedContactIds: contactIdsWithReport.value,
-}));
-
-const relationStatusChips = computed(() =>
-  recountChips(
-    filterMonthlyReportRowsForChipCounts(rows.value, listFilterParams.value, 'relationStatuses'),
-    relationStatusChipDefs.value,
-    'relationStatusId',
-  ),
-);
-const currentStatusChips = computed(() =>
-  recountChips(
-    filterMonthlyReportRowsForChipCounts(rows.value, listFilterParams.value, 'currentStatuses'),
-    currentStatusChipDefs.value,
-    'currentStatusId',
-  ),
-);
+const monthlyTabs = computed<Array<{ id: MonthlyTabId; title: string; count?: number }>>(() => [
+  { id: 'summary', title: 'Резюме месяца' },
+  { id: 'plan', title: 'План по контактам' },
+  { id: 'actual', title: 'Актуальные контакты', count: actualFilteredRows.value.length },
+  { id: 'new', title: 'Новые контакты', count: newFilteredRows.value.length },
+  { id: 'our-events', title: 'Наши мероприятия' },
+  { id: 'competitor-events', title: 'Мероприятия конкурентов' },
+  { id: 'pains', title: 'Боли и предложения' },
+]);
 
 const actualRows = computed(() =>
   rows.value.filter((row) => row.partnerTypeId === 'active'),
@@ -1231,16 +1368,26 @@ function toggleAllYears(checked: boolean | null) {
     : [];
 }
 
+function toggleAllRelationStatuses(checked: boolean | null) {
+  selectedRelationStatuses.value = checked
+    ? actualRelationStatusChips.value.map((chip) => chip.id)
+    : [];
+}
+
+function toggleAllCurrentStatuses(checked: boolean | null) {
+  selectedCurrentStatuses.value = checked
+    ? actualCurrentStatusChips.value.map((chip) => chip.id)
+    : [];
+}
+
+function toggleAllNewCurrentStatuses(checked: boolean | null) {
+  selectedNewCurrentStatuses.value = checked
+    ? newCurrentStatusChips.value.map((chip) => chip.id)
+    : [];
+}
+
 function toggleAttentionFilter(filter: 'no-touches' | 'no-next-step' | 'no-report') {
   attentionFilter.value = attentionFilter.value === filter ? 'all' : filter;
-}
-
-function onInsightClick(link: { path: string }) {
-  openLink(link.path);
-}
-
-function openMonthlySummary() {
-  openBitrixPath('/crm/type/1278/list/category/0/');
 }
 
 function openFieldEditor(row: MonthlyReportRow, kind: FieldEditorKind) {
@@ -1344,13 +1491,6 @@ async function onInterestBlur(row: MonthlyReportRow) {
   } finally {
     savingCell.value = false;
   }
-}
-
-function openLink(path: string) {
-  if (!path || path === '#') {
-    return;
-  }
-  openBitrixPath(path);
 }
 
 function openEventDetails(eventId: string) {
@@ -1488,6 +1628,15 @@ watch(actualFilteredRows, () => {
 });
 
 watch(newFilteredRows, () => {
+  void refreshTableScroll();
+});
+
+watch(activeTab, async (tab) => {
+  if (tab !== 'actual' && tab !== 'new') {
+    return;
+  }
+  await nextTick();
+  mountStickyReportTableHeaders();
   void refreshTableScroll();
 });
 
