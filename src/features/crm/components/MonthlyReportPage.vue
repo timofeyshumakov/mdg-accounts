@@ -1046,7 +1046,7 @@ const yearOptions = monthlyYearOptions;
 const actualHeaders = [
   { title: 'Партнер', key: 'partner', align: 'start' as const, sortable: false },
   { title: 'Ответственный', key: 'assigned', align: 'start' as const, sortable: false },
-  { title: 'Статус отношений', key: 'relationStatus', align: 'center' as const, sortable: false },
+  { title: 'Статус отношений', key: 'relationStatus', align: 'center' as const, sortable: false, width: 180 },
   { title: 'Нозологии', key: 'nosologies', align: 'center' as const, sortable: false, width: '12%' },
   { title: 'Мероприятия', key: 'ourEventsLink', align: 'center' as const, sortable: false },
   {
@@ -1059,7 +1059,7 @@ const actualHeaders = [
       { title: 'Встречи', key: 'meetings', align: 'center' as const, sortable: false },
     ],
   },
-  { title: 'Текущий статус', key: 'currentStatus', align: 'center' as const, sortable: false },
+  { title: 'Текущий статус', key: 'currentStatus', align: 'center' as const, sortable: false, width: 180 },
   { title: 'Комментарий', key: 'comment', align: 'start' as const, sortable: false },
   { title: 'Следующий шаг', key: 'nextStep', align: 'start' as const, sortable: false },
   { title: 'Задачи', key: 'tasks', align: 'center' as const, sortable: false },

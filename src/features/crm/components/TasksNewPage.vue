@@ -13,7 +13,6 @@
         <aside class="tasks-sidebar panel">
           <div class="tasks-sidebar__head">
             <span class="tasks-sidebar__title">Тип задач</span>
-            <span class="tasks-badge">{{ partners.length }}</span>
           </div>
 
           <div class="tasks-sidebar__nav-group">
@@ -258,8 +257,9 @@
             item-value="id"
             density="comfortable"
             hover
-            class="report-data-table tasks-table panel"
+            class="report-data-table report-data-table--paginated tasks-table panel"
             :items-per-page="20"
+            :items-per-page-options="[10, 20, 50, 100]"
           >
             <template #item.title="{ item }">
               <div class="tasks-cell">
@@ -357,7 +357,7 @@ const eventOptions = ref<Array<{ id: string; title: string }>>([]);
 const responsibleOptions = ref<Array<{ id: string; name: string }>>([]);
 
 /** Режим левого сайдбара: 'all' | 'general' | 'partner' */
-const scopeMode = ref<'all' | 'general' | 'partner'>('partner');
+const scopeMode = ref<'all' | 'general' | 'partner'>('all');
 const selectedPartnerId = ref('');
 const partnerSearch = ref('');
 /** Фильтр по мероприятиям активного партнёра: 'all' | 'none' | '<eventId>' */
@@ -643,8 +643,10 @@ async function createTask() {
     return;
   }
 
-  const partner = activePartner.value;
-  const eventId = eventFilter.value.startsWith('e') || /^\d+$/.test(eventFilter.value)
+  // Привязка к партнёру учитывается только если активен выбор конкретного партнёра
+  const isPartnerScope = scopeMode.value === 'partner';
+  const partner = isPartnerScope ? activePartner.value : null;
+  const eventId = isPartnerScope && (eventFilter.value.startsWith('e') || /^\d+$/.test(eventFilter.value))
     ? eventFilter.value
     : undefined;
   const eventObj = eventId ? scopedPartnerEvents.value.find((e) => e.id === eventId) : null;
@@ -656,18 +658,11 @@ async function createTask() {
     title = `Задача по партнёру «${partner.partnerName}»`;
   }
 
-  // Если партнёр не выбран, используем первого партнёра из списка, чтобы привязать к CRM
-  const targetContactId = partner?.contactId || partners.value[0]?.contactId;
-  if (!targetContactId) {
-    window.alert('Нет партнёров для привязки задачи');
-    return;
-  }
-
   creating.value = true;
   try {
     const created = await createPartnerTask({
       title,
-      contactId: targetContactId,
+      contactId: partner?.contactId,
       eventId: eventObj?.id,
     });
 

@@ -779,7 +779,7 @@ function buildResponsibleOptions(
 
 /** Привязки задачи: партнёр (C_) и мероприятие (T41c_). */
 export function buildTaskCrmBindings(
-  contactId: string,
+  contactId?: string,
   eventId?: string,
 ): string[] {
   const bindings: string[] = [];
@@ -796,8 +796,8 @@ export function buildTaskCrmBindings(
 export interface CreateTaskInput {
   /** Название задачи. */
   title: string;
-  /** id партнёра-контакта. */
-  contactId: string;
+  /** id партнёра-контакта (необязательно — если создаётся без привязки). */
+  contactId?: string;
   /** id мероприятия (необязательно). */
   eventId?: string;
   /** Ответственный (необязательно — по умолчанию текущий пользователь). */
@@ -829,25 +829,23 @@ export async function resolveCurrentUserId(): Promise<number | null> {
 
 /**
  * Создаёт задачу через tasks.task.add и возвращает её id.
- * Задача сразу привязывается к группе партнёров (1314) и к сущностям CRM,
+ * Задача сразу привязывается к группе партнёров (1314) и к сущностям CRM (если переданы),
  * поэтому появляется и в отчёте, и в группе Bitrix.
  * Исполнитель по умолчанию — текущий пользователь.
  */
 export async function createPartnerTask(
   input: CreateTaskInput,
 ): Promise<{ id: string }> {
-  if (!input.contactId) {
-    throw new Error('Не указан партнёр для задачи');
-  }
-
   const bindings = buildTaskCrmBindings(input.contactId, input.eventId);
 
   const fields: Record<string, unknown> = {
     TITLE: input.title,
     // Группа «Задачи "Отдел по работе с партнерами"».
     GROUP_ID: TASKS_PARTNERS_GROUP_ID,
-    UF_CRM_TASK: bindings,
   };
+  if (bindings.length) {
+    fields.UF_CRM_TASK = bindings;
+  }
 
   // Исполнитель — переданный явно либо текущий пользователь (создатель).
   let responsible = Number(input.responsibleId);

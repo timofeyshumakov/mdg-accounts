@@ -381,18 +381,11 @@ const loadingMessage = ref('Загрузка мероприятий…');
 const rows = ref<OurEventListRow[]>([]);
 
 /**
- * Список ответственных формируется динамически из загруженных мероприятий
- * аналогично detail-report (менеджеры ufCrm38_1753082810 / аккаунт-отдела).
+ * Список ответственных формируется из менеджеров аккаунт-отдела загруженных мероприятий.
  */
 const assignedOptions = computed(() => {
   const map = new Map<string, string>();
   rows.value.forEach((row) => {
-    // Менеджеры отдела продаж (ufCrm38_1753082810 — как в detail-report)
-    row.salesManagers.forEach((user) => {
-      if (user.id && user.name) {
-        map.set(String(user.id), user.name);
-      }
-    });
     // Менеджеры аккаунт-отдела
     if (row.managerIds && row.managerName) {
       const names = row.managerName.split(',').map((part) => part.trim());
@@ -572,15 +565,13 @@ const stageOptions = computed(() => {
 });
 
 const filteredRows = computed(() => rows.value.filter((row) => {
-  // Ответственный: проверка совпадения с менеджерами мероприятия (отдел продаж и аккаунт-отдел)
+  // Ответственный: проверка совпадения с менеджерами аккаунт-отдела
   if (selectedAssigned.value.length) {
-    const rowManagerIds = [
+    const rowAccountManagerIds = [
       ...(row.managerIds || []),
-      ...(row.salesManagerIds || []),
       ...(row.managerId ? [row.managerId] : []),
-      ...row.salesManagers.map((m) => String(m.id)),
     ].map(String);
-    if (!selectedAssigned.value.some((id) => rowManagerIds.includes(String(id)))) {
+    if (!selectedAssigned.value.some((id) => rowAccountManagerIds.includes(String(id)))) {
       return false;
     }
   }
