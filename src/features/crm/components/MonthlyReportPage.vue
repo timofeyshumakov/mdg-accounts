@@ -1016,7 +1016,7 @@ const tasksDialogItems = ref<MonthlyTaskItem[]>([]);
 const sendingRowId = ref<string | null>(null);
 const submitError = ref('');
 const attentionFilter = ref<'all' | 'no-touches' | 'no-next-step' | 'no-report'>('all');
-const activeTab = ref<MonthlyTabId>('actual');
+const activeTab = ref<MonthlyTabId>('plan');
 const contactIdsWithReport = ref<Set<string>>(new Set());
 const userDisplaysById = ref<Map<string, UserDisplay>>(new Map());
 const failedAvatars = ref<Set<string>>(new Set());
@@ -1192,8 +1192,8 @@ const stats = computed(() => {
 });
 
 const monthlyTabs = computed<Array<{ id: MonthlyTabId; title: string; count?: number }>>(() => [
-  { id: 'summary', title: 'Резюме месяца' },
   { id: 'plan', title: 'План по контактам' },
+  { id: 'summary', title: 'Резюме месяца' },
   { id: 'actual', title: 'Актуальные контакты', count: actualFilteredRows.value.length },
   { id: 'new', title: 'Новые контакты', count: newFilteredRows.value.length },
   { id: 'our-events', title: 'Наши мероприятия' },
